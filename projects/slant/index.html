@@ -1,0 +1,3254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>SLANT /</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+:root {
+  --spawn-pop-duration: 320ms;
+  --intro-pop-duration: 560ms;
+  --intro-charge-duration: 860ms;
+  --rotation-duration: 200ms;
+  --board-clear-duration: 600ms;
+  --merge-highlight-duration: 150ms;
+  --merge-inward-duration: 220ms;
+  --merge-settle-duration: 120ms;
+  --burst-pulse-duration: 240ms;
+  --burst-spin-duration: 340ms;
+  --burst-explode-duration: 320ms;
+}
+
+@keyframes tile-pop {
+  0%   { opacity: 0; transform: scale(0.7); }
+  60%  { opacity: 1; transform: scale(1.06); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.tile-pop {
+  animation: tile-pop var(--spawn-pop-duration) cubic-bezier(.16, 1, .3, 1);
+}
+
+.tile-pop-intro {
+  animation: tile-pop var(--intro-pop-duration) cubic-bezier(.16, 1, .3, 1);
+}
+
+.intro-ui-hidden {
+  opacity: 0;
+}
+
+.intro-ui-fade-in {
+  transition: opacity 280ms ease;
+}
+
+.tile {
+  transition: transform 120ms ease, filter 160ms ease, opacity 160ms ease;
+}
+
+.tile-face {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform var(--rotation-duration) cubic-bezier(.16, 1, .3, 1),
+    box-shadow 120ms ease,
+    filter 120ms ease;
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.14),
+    inset -2px -2px 5px rgba(0,0,0,0.20),
+    0.5px 1px 1px rgba(128, 100, 63, 0.10),
+    1px 2px 2px rgba(128, 100, 63, 0.08),
+    2px 4px 4px rgba(128, 100, 63, 0.06);
+}
+
+.tile-face::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    145deg,
+    rgba(255,255,255,0.12) 0%,
+    rgba(255,255,255,0.05) 25%,
+    rgba(255,255,255,0) 42%,
+    rgba(0,0,0,0.06) 70%,
+    rgba(0,0,0,0.14) 100%
+  );
+  pointer-events: none;
+  z-index: 10;
+}
+
+.tile-face::after {
+  content: "";
+  position: absolute;
+  left: 9%;
+  right: 18%;
+  top: 0;
+  height: 26%;
+  border-radius: 10px 10px 14px 14px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.14),
+    rgba(255,255,255,0.05) 50%,
+    transparent
+  );
+  opacity: 0.65;
+  pointer-events: none;
+  z-index: 11;
+}
+
+.tile:hover {
+  transform: translateY(-1px);
+}
+
+.tile:hover .tile-face {
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.12),
+    inset -2px -2px 4px rgba(0,0,0,0.18),
+    0.5px 1px 1px rgba(128, 100, 63, 0.12),
+    1px 2px 2px rgba(128, 100, 63, 0.10),
+    2px 4px 4px rgba(128, 100, 63, 0.08),
+    4px 8px 8px rgba(128, 100, 63, 0.05);
+  filter: brightness(1.01);
+}
+
+.tile:active {
+  transform: translateY(1px);
+}
+
+.tile:active .tile-face {
+  box-shadow:
+    inset 2px 2px 4px rgba(0,0,0,0.22),
+    inset -1px -1px 0 rgba(255,255,255,0.08),
+    0 1px 2px rgba(0,0,0,0.14);
+  filter: brightness(0.99);
+}
+
+.tile-face .seam {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 49.3%,
+    rgba(255,255,255,0.06) 49.8%,
+    rgba(0,0,0,0.08) 50.2%,
+    transparent 50.7%
+  );
+  mix-blend-mode: soft-light;
+  opacity: 0.8;
+  pointer-events: none;
+  z-index: 9;
+}
+
+.tile-art {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  transition: transform var(--rotation-duration) cubic-bezier(.16, 1, .3, 1);
+}
+
+@keyframes merge-center-pulse {
+  0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(51, 51, 51, 0.16); }
+  50%  { transform: scale(1.04); box-shadow: 0 0 0 6px rgba(51, 51, 51, 0.1); }
+  100% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(51, 51, 51, 0); }
+}
+.merge-center { animation: merge-center-pulse var(--merge-highlight-duration) ease-out forwards; }
+
+@keyframes merge-neighbor-highlight {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(51, 51, 51, 0.12); }
+  100% { transform: scale(1.02); box-shadow: 0 0 0 8px rgba(51, 51, 51, 0); }
+}
+.merge-neighbor-highlight {
+  animation: merge-neighbor-highlight var(--merge-highlight-duration) ease-out forwards;
+}
+
+@keyframes assist-tile-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 197, 99, 0.16); filter: brightness(1); }
+  50% { transform: scale(1.03); box-shadow: 0 0 0 8px rgba(255, 197, 99, 0); filter: brightness(1.08); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 197, 99, 0); filter: brightness(1.02); }
+}
+.assist-match {
+  animation: assist-tile-pulse var(--merge-highlight-duration) ease-out forwards;
+}
+
+@keyframes merge-from-top {
+  0% { transform: translateY(0); opacity: 1; }
+  65% { transform: translateY(72%); opacity: 1; }
+  100% { transform: translateY(104%); opacity: 0; }
+}
+@keyframes merge-from-bottom {
+  0% { transform: translateY(0); opacity: 1; }
+  65% { transform: translateY(-72%); opacity: 1; }
+  100% { transform: translateY(-104%); opacity: 0; }
+}
+@keyframes merge-from-left {
+  0% { transform: translateX(0); opacity: 1; }
+  65% { transform: translateX(72%); opacity: 1; }
+  100% { transform: translateX(104%); opacity: 0; }
+}
+@keyframes merge-from-right {
+  0% { transform: translateX(0); opacity: 1; }
+  65% { transform: translateX(-72%); opacity: 1; }
+  100% { transform: translateX(-104%); opacity: 0; }
+}
+
+.merge-from-top { animation: merge-from-top var(--merge-inward-duration) cubic-bezier(.2, .8, .2, 1) forwards; }
+.merge-from-bottom { animation: merge-from-bottom var(--merge-inward-duration) cubic-bezier(.2, .8, .2, 1) forwards; }
+.merge-from-left { animation: merge-from-left var(--merge-inward-duration) cubic-bezier(.2, .8, .2, 1) forwards; }
+.merge-from-right { animation: merge-from-right var(--merge-inward-duration) cubic-bezier(.2, .8, .2, 1) forwards; }
+
+@keyframes merge-result-glow {
+  0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.22); filter: brightness(1.04); }
+  60% { box-shadow: 0 0 0 12px rgba(74, 222, 128, 0.08); filter: brightness(1.08); }
+  100% { box-shadow: 0 0 0 18px rgba(74, 222, 128, 0); filter: brightness(1); }
+}
+.merge-result { animation: merge-result-glow var(--merge-settle-duration) ease-out forwards; }
+
+.tile-face {
+  box-shadow:
+    0.5px 1px 1px rgba(150, 118, 79, 0.09),
+    1px 2px 2px rgba(150, 118, 79, 0.075),
+    2px 4px 4px rgba(150, 118, 79, 0.055);
+}
+
+@keyframes center-charge-pulse {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.08); filter: brightness(1.15); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+.center-charge-pulse {
+  animation: center-charge-pulse 220ms ease-out;
+}
+
+@keyframes center-overload {
+  0% { transform: translate(0, 0) scale(1); filter: brightness(1); }
+  12% { transform: translate(-0.6px, 0.8px) scale(1.01); filter: brightness(1.06); }
+  24% { transform: translate(0.9px, -0.8px) scale(1.02); filter: brightness(1.1); }
+  36% { transform: translate(-1.2px, 0.5px) scale(1.03); filter: brightness(1.14); }
+  48% { transform: translate(1.1px, -0.9px) scale(1.04); filter: brightness(1.18); }
+  60% { transform: translate(-0.9px, 1.1px) scale(1.05); filter: brightness(1.2); }
+  72% { transform: translate(0.8px, -1px) scale(1.06); filter: brightness(1.22); }
+  84% { transform: translate(-0.5px, 0.7px) scale(1.05); filter: brightness(1.2); }
+  100% { transform: translate(0, 0) scale(1.04); filter: brightness(1.16); }
+}
+.center-overload {
+  animation: center-overload 380ms ease-in-out forwards;
+}
+
+@keyframes center-near-ready {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.03); filter: brightness(1.08); }
+  100% { transform: scale(1); filter: brightness(1.02); }
+}
+.center-near-ready {
+  animation: center-near-ready 850ms ease-in-out infinite;
+}
+
+@keyframes center-ready-idle {
+  0% {
+    transform: translateY(calc(var(--center-lift, 0px) * -0.28)) translateX(0) scale(1);
+    filter: brightness(1.05);
+  }
+  20% {
+    transform: translateY(calc(var(--center-lift, 0px) * -0.28)) translateX(-0.4px) scale(1.004);
+    filter: brightness(1.09);
+  }
+  40% {
+    transform: translateY(calc(var(--center-lift, 0px) * -0.28)) translateX(0.45px) scale(1.008);
+    filter: brightness(1.12);
+  }
+  60% {
+    transform: translateY(calc(var(--center-lift, 0px) * -0.28)) translateX(-0.35px) scale(1.006);
+    filter: brightness(1.09);
+  }
+  100% {
+    transform: translateY(calc(var(--center-lift, 0px) * -0.28)) translateX(0) scale(1);
+    filter: brightness(1.05);
+  }
+}
+
+@keyframes center-trigger-charge {
+  0% {
+    transform: translateY(calc(var(--center-lift, 0px) * -0.28)) scale(1);
+    filter: brightness(1.14);
+  }
+  100% {
+    transform: translateY(-2px) scale(3.08);
+    filter: brightness(1.26);
+  }
+}
+
+@keyframes center-slam-impact {
+  0% {
+    transform: translateY(-2px) scale(3.08);
+    filter: brightness(1.26);
+  }
+  72% {
+    transform: translateY(2px) scale(0.92);
+    filter: brightness(0.98);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    filter: brightness(1);
+  }
+}
+
+.tile.center-control {
+  transition: transform 140ms ease, filter 140ms ease;
+}
+
+.tile.center-charging {
+  transform: translateY(calc(var(--center-lift, 0px) * -1));
+}
+
+.tile.center-ready {
+  cursor: pointer;
+  animation: center-ready-idle 860ms ease-in-out infinite;
+}
+
+.tile.center-triggered {
+  animation: center-trigger-charge 180ms ease-out forwards;
+}
+
+.tile.center-resolving {
+  animation: center-slam-impact 150ms cubic-bezier(.2, .8, .2, 1) forwards;
+}
+
+.tile.center-triggered,
+.tile.center-resolving {
+  overflow: visible;
+  z-index: 35;
+}
+
+.tile.center-charging .tile-face,
+.tile.center-ready .tile-face,
+.tile.center-triggered .tile-face,
+.tile.center-resolving .tile-face {
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.08),
+    0 calc(4px + var(--center-lift, 0px)) calc(10px + var(--center-lift, 0px)) rgba(119, 103, 63, 0.10),
+    0 0 calc(8px + (var(--center-lift, 0px) * 2)) rgba(255, 214, 122, var(--center-glow, 0.12));
+}
+
+@keyframes board-impact {
+  0% { transform: translate3d(0, 0, 0); }
+  25% { transform: translate3d(0, 1px, 0); }
+  50% { transform: translate3d(0, -1px, 0); }
+  75% { transform: translate3d(0, 1px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+.board-impact {
+  animation: board-impact 150ms ease-out;
+}
+
+@keyframes start-screen-fade {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.start-fade-out {
+  animation: start-screen-fade 340ms ease forwards;
+}
+
+.start-enter-left,
+.start-enter-down {
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.start-enter-left {
+  transform: translateX(-28px);
+  transition: transform 680ms cubic-bezier(.16, 1, .3, 1), opacity 560ms ease;
+}
+
+.start-enter-down {
+  transform: translateY(-20px);
+  transition: transform 700ms cubic-bezier(.16, 1, .3, 1), opacity 580ms ease;
+}
+
+#start-screen.start-screen-entered .start-enter-left,
+#start-screen.start-screen-entered .start-enter-down {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
+#start-screen .start-hero {
+  transition-delay: 120ms;
+}
+
+#start-screen .start-rule.start-enter-down:nth-child(1) {
+  transition-delay: 340ms;
+}
+
+#start-screen .start-rule.start-enter-down:nth-child(2) {
+  transition-delay: 500ms;
+}
+
+#start-screen .start-rule.start-enter-down:nth-child(3) {
+  transition-delay: 660ms;
+}
+
+#start-screen .start-rule.start-enter-down:nth-child(4) {
+  transition-delay: 820ms;
+}
+
+#start-screen .start-cta {
+  transition-delay: 1040ms;
+}
+
+#board-shell {
+  overflow: visible;
+}
+
+#board-shell-vignette {
+  position: absolute;
+  inset: -6%;
+  border-radius: 1.9rem;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 50%,
+      rgba(242, 235, 215, 0) 34%,
+      rgba(94, 78, 48, 0.05) 68%,
+      rgba(51, 51, 51, 0.12) 100%);
+  transition: opacity 220ms ease;
+  z-index: 18;
+}
+
+#board-shell::before,
+#board-shell::after {
+  content: "";
+  position: absolute;
+  inset: -18%;
+  border-radius: 1.75rem;
+  pointer-events: none;
+  opacity: 0;
+}
+
+#board-shell::before {
+  background:
+    radial-gradient(circle at 50% 50%,
+      rgba(255, 219, 124, 0.26) 0%,
+      rgba(255, 196, 86, 0.18) 18%,
+      rgba(255, 211, 134, 0.08) 34%,
+      rgba(242, 235, 215, 0) 68%);
+  transform: scale(0.38);
+  filter: blur(10px);
+  transition: opacity 520ms ease, transform 820ms cubic-bezier(.16, 1, .3, 1);
+}
+
+#board-shell::after {
+  background:
+    radial-gradient(circle at 50% 50%,
+      rgba(255, 244, 212, 0.78) 0%,
+      rgba(255, 208, 104, 0.42) 14%,
+      rgba(255, 190, 72, 0.16) 28%,
+      rgba(242, 235, 215, 0) 66%);
+  transform: scale(0.5);
+  filter: blur(3px);
+  transition: opacity 520ms ease, transform 820ms cubic-bezier(.16, 1, .3, 1);
+}
+
+#board-shell.opening-focus::before,
+#board-shell.opening-focus::after {
+  opacity: 1;
+}
+
+#board-shell.opening-focus::before {
+  transform: scale(0.6);
+}
+
+#board-shell.opening-focus::after {
+  transform: scale(0.82);
+}
+
+#board-shell.opening-spread::before,
+#board-shell.opening-spread::after {
+  opacity: 0.7;
+}
+
+#board-shell.opening-spread::before {
+  transform: scale(1.24);
+}
+
+#board-shell.opening-spread::after {
+  opacity: 0.52;
+  transform: scale(1.6);
+}
+
+@keyframes ready-mode-settle {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  45% {
+    transform: translateY(1.6px) scale(0.988);
+  }
+  100% {
+    transform: translateY(0) scale(0.994);
+  }
+}
+
+#board-shell.center-ready-mode #board-shell-vignette {
+  opacity: 1;
+}
+
+#board-shell.center-ready-mode .tile:not(.center-control) {
+  filter: saturate(0.48) brightness(0.82);
+  opacity: 0.82;
+  pointer-events: none;
+  cursor: default !important;
+}
+
+#board-shell.center-ready-mode .tile:not(.center-control) .tile-face {
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.08),
+    inset -2px -2px 5px rgba(0,0,0,0.14),
+    0.5px 1px 1px rgba(128, 100, 63, 0.07),
+    1px 2px 2px rgba(128, 100, 63, 0.05),
+    2px 4px 4px rgba(128, 100, 63, 0.03);
+}
+
+#board-shell.center-ready-mode .tile:not(.center-control):hover,
+#board-shell.center-ready-mode .tile:not(.center-control):active {
+  transform: none;
+}
+
+#board-shell.center-ready-mode .tile:not(.center-control):hover .tile-face,
+#board-shell.center-ready-mode .tile:not(.center-control):active .tile-face {
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.08),
+    inset -2px -2px 5px rgba(0,0,0,0.14),
+    0.5px 1px 1px rgba(128, 100, 63, 0.07),
+    1px 2px 2px rgba(128, 100, 63, 0.05),
+    2px 4px 4px rgba(128, 100, 63, 0.03);
+  filter: none;
+}
+
+#board-shell.center-ready-enter .tile:not(.center-control) {
+  animation: ready-mode-settle 220ms cubic-bezier(.2, .8, .2, 1) forwards;
+}
+
+#board-shell.center-ready-mode .tile.center-control {
+  opacity: 1;
+  filter: none;
+  z-index: 36;
+}
+
+@keyframes intro-core-fadein {
+  0% {
+    opacity: 0;
+    filter: brightness(0.96) saturate(0.94);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.05),
+      0 0 0 rgba(255, 204, 102, 0),
+      0 0 0 rgba(255, 204, 102, 0),
+      0 6px 14px rgba(119, 103, 63, 0.04);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1.02) saturate(0.98);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.1),
+      0 0 0 rgba(255, 204, 102, 0),
+      0 0 0 rgba(255, 204, 102, 0),
+      0 8px 18px rgba(119, 103, 63, 0.1);
+  }
+}
+
+@keyframes intro-core-charge {
+  0% {
+    filter: brightness(1.02) saturate(1);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.1),
+      0 0 0 0 rgba(255, 205, 102, 0),
+      0 0 0 rgba(255, 198, 84, 0),
+      0 0 0 rgba(255, 198, 84, 0),
+      0 8px 18px rgba(119, 103, 63, 0.1);
+  }
+  20% {
+    filter: brightness(1.02) saturate(1);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.1),
+      0 0 0 0 rgba(255, 205, 102, 0),
+      0 0 0 rgba(255, 198, 84, 0),
+      0 0 0 rgba(255, 198, 84, 0),
+      0 8px 18px rgba(119, 103, 63, 0.1);
+  }
+  42% {
+    filter: brightness(1.05) saturate(1.02);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.11),
+      0 0 0 0 rgba(255, 205, 102, 0),
+      0 0 0 rgba(255, 198, 84, 0),
+      0 0 0 rgba(255, 198, 84, 0),
+      0 8px 18px rgba(119, 103, 63, 0.11);
+  }
+  54% {
+    filter: brightness(1.06) saturate(1.03);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.12),
+      0 0 0 0 rgba(255, 205, 102, 0),
+      0 0 0 rgba(255, 198, 84, 0),
+      0 0 0 rgba(255, 198, 84, 0),
+      0 8px 18px rgba(119, 103, 63, 0.11);
+  }
+  68% {
+    filter: brightness(1.09) saturate(1.03);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.16),
+      0 0 0 3px rgba(255, 205, 102, 0.24),
+      0 0 8px rgba(255, 198, 84, 0.12),
+      0 0 18px rgba(255, 198, 84, 0.06),
+      0 8px 18px rgba(119, 103, 63, 0.12);
+  }
+  80% {
+    filter: brightness(1.03) saturate(1.01);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.11),
+      0 0 0 3px rgba(255, 205, 102, 0.26),
+      0 0 8px rgba(255, 198, 84, 0.13),
+      0 0 20px rgba(255, 198, 84, 0.07),
+      0 8px 18px rgba(119, 103, 63, 0.1);
+  }
+  94% {
+    filter: brightness(1.14) saturate(1.06);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.18),
+      0 0 0 5px rgba(255, 210, 112, 0.46),
+      0 0 10px rgba(255, 198, 84, 0.22),
+      0 0 22px rgba(255, 198, 84, 0.12),
+      0 8px 18px rgba(119, 103, 63, 0.13);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1.1) saturate(1.04);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.15),
+      0 0 0 4px rgba(255, 210, 112, 0.34),
+      0 0 9px rgba(255, 198, 84, 0.18),
+      0 0 18px rgba(255, 198, 84, 0.1),
+      0 8px 18px rgba(119, 103, 63, 0.12);
+  }
+}
+
+.tile.center-intro-fadein,
+.tile.center-intro-charge {
+  z-index: 28;
+}
+
+.tile.center-intro-fadein .tile-face {
+  animation: intro-core-fadein 420ms ease-out forwards;
+}
+
+.tile.center-intro-charge .tile-face {
+  animation: intro-core-charge var(--intro-charge-duration) ease-out forwards;
+}
+
+.tile.center-intro-fadein .tile-face::before,
+.tile.center-intro-charge .tile-face::before,
+.tile.center-intro-overload .tile-face::before,
+.tile.center-intro-launch .tile-face::before,
+.tile.center-intro-slam .tile-face::before,
+.tile.center-intro-spread .tile-face::before {
+  opacity: 0;
+}
+
+.tile.center-intro-fadein .tile-face::after,
+.tile.center-intro-charge .tile-face::after,
+.tile.center-intro-overload .tile-face::after,
+.tile.center-intro-launch .tile-face::after,
+.tile.center-intro-slam .tile-face::after,
+.tile.center-intro-spread .tile-face::after {
+  opacity: 0;
+}
+
+@keyframes intro-center-segment-charge {
+  0% {
+    opacity: 0;
+    filter: saturate(0.92) brightness(1);
+  }
+  100% {
+    opacity: 1;
+    filter: saturate(1.04) brightness(1.04);
+  }
+}
+
+.intro-charge-segment {
+  animation: intro-center-segment-charge 260ms ease-out forwards;
+  animation-fill-mode: both;
+  opacity: 0;
+}
+
+@keyframes intro-core-overload {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  18% {
+    transform: translate3d(-0.45px, 0.35px, 0) scale(1.006);
+  }
+  36% {
+    transform: translate3d(0.5px, -0.45px, 0) scale(1.01);
+  }
+  54% {
+    transform: translate3d(-0.75px, 0.55px, 0) scale(1.014);
+  }
+  72% {
+    transform: translate3d(0.85px, -0.6px, 0) scale(1.018);
+  }
+  88% {
+    transform: translate3d(-0.9px, 0.5px, 0) scale(1.022);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.026);
+  }
+}
+
+.tile.center-intro-overload {
+  z-index: 30;
+  animation: intro-core-overload 280ms ease-in-out forwards;
+}
+
+.tile.center-intro-overload .tile-face {
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.16),
+    0 0 0 6px rgba(255, 208, 108, 0.44),
+    0 0 12px rgba(255, 204, 102, 0.24),
+    0 0 24px rgba(255, 204, 102, 0.12),
+    0 10px 20px rgba(119, 103, 63, 0.14);
+  filter: brightness(1.14) saturate(1.06);
+}
+
+@keyframes intro-core-launch {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1.02);
+  }
+  100% {
+    transform: translate3d(0, -6px, 0) scale(3.05);
+  }
+}
+
+@keyframes intro-core-slam {
+  0% {
+    transform: translate3d(0, -6px, 0) scale(3.05);
+  }
+  74% {
+    transform: translate3d(0, 2px, 0) scale(0.94);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.tile.center-intro-launch,
+.tile.center-intro-slam {
+  overflow: visible;
+  z-index: 34;
+}
+
+.tile.center-intro-launch {
+  animation: intro-core-launch 180ms ease-out forwards;
+}
+
+.tile.center-intro-slam {
+  animation: intro-core-slam 160ms cubic-bezier(.2, .8, .2, 1) forwards;
+}
+
+.tile.center-intro-launch .tile-face,
+.tile.center-intro-slam .tile-face,
+.tile.center-intro-spread .tile-face {
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.12),
+    0 0 0 calc(2px + (var(--intro-charge-opacity, 1) * 4px)) rgba(255, 208, 108, calc(0.10 + var(--intro-charge-opacity, 1) * 0.28)),
+    0 0 10px rgba(255, 204, 102, calc(0.06 + var(--intro-charge-opacity, 1) * 0.16)),
+    0 0 20px rgba(255, 204, 102, calc(0.02 + var(--intro-charge-opacity, 1) * 0.08)),
+    0 8px 18px rgba(119, 103, 63, 0.12);
+}
+
+.tile.center-intro-spread {
+  z-index: 28;
+}
+
+.tile.intro-placeholder {
+  pointer-events: none;
+}
+
+.tile.intro-placeholder .tile-face {
+  opacity: 0;
+  box-shadow: none;
+  filter: none;
+}
+
+@keyframes cluster-consume {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  70% {
+    transform: translate(calc(var(--to-x) * 0.72), calc(var(--to-y) * 0.72)) scale(0.88);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--to-x), var(--to-y)) scale(0.54);
+    opacity: 0;
+  }
+}
+.cluster-consume {
+  animation: cluster-consume 260ms cubic-bezier(.2, .8, .2, 1) forwards;
+}
+
+@keyframes l3-event-fly {
+  0% { transform: translate(var(--start-x), var(--start-y)) scale(0.72); opacity: 0; }
+  18% { opacity: 1; }
+  100% { transform: translate(0, 0) scale(0.22); opacity: 0; }
+}
+.l3-event {
+  position: absolute;
+  width: calc((100% - 1rem) / 5);
+  aspect-ratio: 1 / 1;
+  pointer-events: none;
+  z-index: 45;
+  animation: l3-event-fly 260ms cubic-bezier(.2, .8, .2, 1) forwards;
+}
+
+@keyframes burst-center-pulse {
+  0% { transform: scale(1); filter: brightness(1); }
+  45% { transform: scale(1.18); filter: brightness(1.32); }
+  100% { transform: scale(1.06); filter: brightness(1.12); }
+}
+.burst-center-pulse {
+  animation: burst-center-pulse var(--burst-pulse-duration) ease-out forwards;
+}
+
+@keyframes burst-spin {
+  0% { transform: rotate(0deg) scale(1); }
+  100% { transform: rotate(240deg) scale(1.08); }
+}
+.burst-spin {
+  animation: burst-spin var(--burst-spin-duration) cubic-bezier(.2, .8, .2, 1) forwards;
+  animation-fill-mode: forwards;
+}
+
+@keyframes burst-explode {
+  0% { transform: translate(0, 0) scale(1.08); opacity: 1; filter: brightness(1.08); }
+  100% { transform: translate(var(--burst-x), var(--burst-y)) scale(0.34); opacity: 0; filter: brightness(1.18); }
+}
+.burst-explode {
+  animation: burst-explode var(--burst-explode-duration) cubic-bezier(.2, .8, .2, 1) forwards;
+  animation-fill-mode: forwards;
+}
+
+.start-rule {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.8rem 0;
+  border-top: 1px solid rgba(51, 51, 51, 0.08);
+  justify-content: center;
+  width: max-content;
+}
+
+.start-rule.table-row {
+  align-items: flex-start;
+}
+
+.start-rule:first-of-type {
+  border-top: none;
+}
+
+.start-label {
+  flex: 0 0 auto;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #333333;
+  text-align: left;
+}
+
+.start-demo {
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
+  height: 3.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  position: relative;
+  margin: 0;
+}
+
+.start-flow {
+  width: 100%;
+  max-width: 22rem;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem 0;
+}
+
+.start-hero {
+  align-self: flex-start;
+  text-align: left;
+  margin-bottom: 6.5rem;
+}
+
+.start-rules {
+  width: 100%;
+  margin-top: 0;
+}
+
+.start-cta {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 2.35rem;
+}
+
+.demo-tile {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.6rem;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 10px rgba(51, 51, 51, 0.08);
+  background: #f2ebd7;
+  flex: 0 0 auto;
+}
+
+.demo-tile-l1-rg {
+  background: linear-gradient(135deg, #F36C52 0%, #F36C52 50%, #6CAE86 50%, #6CAE86 100%);
+}
+
+.demo-tile-l1-by {
+  background: linear-gradient(135deg, #4485CA 0%, #4485CA 50%, #FFC563 50%, #FFC563 100%);
+}
+
+.demo-tile-l1-ry {
+  background: linear-gradient(135deg, #F36C52 0%, #F36C52 50%, #FFC563 50%, #FFC563 100%);
+}
+
+.demo-tile-l1-bg {
+  background: linear-gradient(135deg, #4485CA 0%, #4485CA 50%, #6CAE86 50%, #6CAE86 100%);
+}
+
+.demo-rotated {
+  transform: rotate(90deg);
+}
+
+.demo-rotated-180 {
+  transform: rotate(180deg);
+}
+
+.demo-rotated-270 {
+  transform: rotate(270deg);
+}
+
+.demo-overlay-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.demo-rotate-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(51, 51, 51, 0.18);
+  pointer-events: none;
+}
+
+.demo-tile-l2::before,
+.demo-tile-l2::after,
+.demo-tile-l2 .quad-a,
+.demo-tile-l2 .quad-b {
+  content: "";
+  position: absolute;
+}
+
+.demo-tile-l2::before {
+  inset: 0 auto 50% 0;
+  width: 100%;
+  background: #F36C52;
+  clip-path: polygon(0 0,100% 0,50% 100%);
+}
+
+.demo-tile-l2::after {
+  inset: 0 0 0 auto;
+  width: 50%;
+  background: #4485CA;
+  clip-path: polygon(100% 0,100% 100%,0 50%);
+}
+
+.demo-tile-l2 .quad-a {
+  inset: auto 0 0 0;
+  height: 50%;
+  background: #6CAE86;
+  clip-path: polygon(0 100%,100% 100%,50% 0);
+}
+
+.demo-tile-l2 .quad-b {
+  inset: 0 auto 0 0;
+  width: 50%;
+  background: #FFC563;
+  clip-path: polygon(0 0,0 100%,100% 50%);
+}
+
+.demo-center {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.6rem;
+  position: relative;
+  overflow: hidden;
+  background: #e8decb;
+  box-shadow: 0 4px 10px rgba(51, 51, 51, 0.06);
+  flex: 0 0 auto;
+  box-sizing: border-box;
+}
+
+.demo-center .hub {
+  position: absolute;
+  inset: 36%;
+  border-radius: 9999px;
+  background: #f2ebd7;
+  z-index: 2;
+}
+
+.demo-center .wedge {
+  position: absolute;
+  inset: 0;
+}
+
+.demo-center .w1 { clip-path: polygon(0 0,50% 0,50% 50%); }
+.demo-center .w2 { clip-path: polygon(50% 0,100% 0,50% 50%); }
+.demo-center .w3 { clip-path: polygon(100% 0,100% 50%,50% 50%); }
+.demo-center .w4 { clip-path: polygon(100% 50%,100% 100%,50% 50%); }
+.demo-center .w5 { clip-path: polygon(100% 100%,50% 100%,50% 50%); }
+.demo-center .w6 { clip-path: polygon(50% 100%,0 100%,50% 50%); }
+.demo-center .w7 { clip-path: polygon(0 100%,0 50%,50% 50%); }
+.demo-center .w8 { clip-path: polygon(0 50%,0 0,50% 50%); }
+
+.demo-dormant .w1 { background: #E7D8CB; }
+.demo-dormant .w2 { background: #ECE0D6; }
+.demo-dormant .w3 { background: #E1DCD2; }
+.demo-dormant .w4 { background: #E8E2D9; }
+.demo-dormant .w5 { background: #E8DDCB; }
+.demo-dormant .w6 { background: #EFE5D7; }
+.demo-dormant .w7 { background: #DFDACE; }
+.demo-dormant .w8 { background: #E7E0D6; }
+
+.demo-half .w1 { background: #F36C52; }
+.demo-half .w2 { background: #EE8F7A; }
+.demo-half .w3 { background: #6CAE86; }
+.demo-half .w4 { background: #86C09D; }
+.demo-half .w5 { background: #E8DDCB; }
+.demo-half .w6 { background: #EFE5D7; }
+.demo-half .w7 { background: #DFDACE; }
+.demo-half .w8 { background: #E7E0D6; }
+
+.demo-full .w1 { background: #F36C52; }
+.demo-full .w2 { background: #EE8F7A; }
+.demo-full .w3 { background: #6CAE86; }
+.demo-full .w4 { background: #86C09D; }
+.demo-full .w5 { background: #FFC563; }
+.demo-full .w6 { background: #F0CD78; }
+.demo-full .w7 { background: #4485CA; }
+.demo-full .w8 { background: #6699D8; }
+
+.demo-center-ready {
+  transform: translateY(-2px) scale(1);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 241, 204, 0.55),
+    0 8px 14px rgba(119, 103, 63, 0.14),
+    0 0 0 1px rgba(255, 206, 102, 0.22),
+    0 0 10px rgba(255, 188, 73, 0.28),
+    0 0 20px rgba(255, 188, 73, 0.16);
+  filter: brightness(1.11) saturate(1.08) contrast(1.04);
+  width: 2.1rem;
+  height: 2.1rem;
+}
+
+.demo-center-ready::before {
+  content: "";
+  position: absolute;
+  inset: -0.08rem;
+  border-radius: 0.72rem;
+  border: 1.5px solid rgba(255, 214, 122, 0.72);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 247, 228, 0.3),
+    0 0 0 1px rgba(255,255,255,0.18),
+    0 0 8px rgba(255, 197, 99, 0.26),
+    0 0 14px rgba(255, 197, 99, 0.14);
+  pointer-events: none;
+}
+
+.demo-center-ready::after {
+  content: "";
+  position: absolute;
+  inset: auto 16% -0.22rem;
+  height: 0.36rem;
+  border-radius: 9999px;
+  background: rgba(119, 103, 63, 0.16);
+  filter: blur(2px);
+  pointer-events: none;
+}
+
+.demo-center-ready .wedge {
+  filter: saturate(1.08) brightness(1.05);
+}
+
+.demo-center-ready .hub {
+  box-shadow:
+    0 0 0 2px rgba(255,245,223,0.7),
+    0 0 8px rgba(255,245,223,0.42),
+    0 0 16px rgba(255, 214, 122, 0.24);
+}
+
+.demo-center-ready .charge-tick {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.16rem;
+  height: 0.34rem;
+  margin-left: -0.08rem;
+  margin-top: -1.18rem;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 237, 185, 0.92),
+    rgba(255, 197, 99, 0.68) 55%,
+    rgba(255, 197, 99, 0)
+  );
+  box-shadow: 0 0 6px rgba(255, 197, 99, 0.2);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.demo-center-ready .charge-tick.t1 { transform: rotate(0deg); }
+.demo-center-ready .charge-tick.t2 { transform: rotate(45deg); }
+.demo-center-ready .charge-tick.t3 { transform: rotate(90deg); }
+.demo-center-ready .charge-tick.t4 { transform: rotate(135deg); }
+.demo-center-ready .charge-tick.t5 { transform: rotate(180deg); }
+.demo-center-ready .charge-tick.t6 { transform: rotate(225deg); }
+.demo-center-ready .charge-tick.t7 { transform: rotate(270deg); }
+.demo-center-ready .charge-tick.t8 { transform: rotate(315deg); }
+
+.demo-center-ready .charge-tick.t2,
+.demo-center-ready .charge-tick.t4,
+.demo-center-ready .charge-tick.t6,
+.demo-center-ready .charge-tick.t8 {
+  height: 0.34rem;
+  margin-top: -1.28rem;
+  opacity: 0.76;
+}
+
+.demo-arrow {
+  color: rgba(51, 51, 51, 0.75);
+  font-size: 1rem;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.demo-plus {
+  color: rgba(51, 51, 51, 0.72);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.demo-curve {
+  width: 1.4rem;
+  height: 1.4rem;
+  border: 2px solid rgba(51, 51, 51, 0.42);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 9999px;
+  transform: rotate(18deg);
+  position: relative;
+}
+
+.demo-curve::after {
+  content: "";
+  position: absolute;
+  right: -0.12rem;
+  top: -0.08rem;
+  width: 0.38rem;
+  height: 0.38rem;
+  border-top: 2px solid rgba(51, 51, 51, 0.7);
+  border-right: 2px solid rgba(51, 51, 51, 0.7);
+  transform: rotate(12deg);
+}
+
+.demo-pips {
+  display: flex;
+  align-items: center;
+  gap: 0.18rem;
+}
+
+.demo-pips span {
+  width: 0.34rem;
+  height: 0.34rem;
+  border-radius: 9999px;
+  background: rgba(51, 51, 51, 0.16);
+}
+
+.demo-pips span.filled {
+  background: rgba(51, 51, 51, 0.78);
+}
+
+.demo-energy {
+  width: 1.1rem;
+  height: 2px;
+  background: rgba(51, 51, 51, 0.2);
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.demo-energy::after {
+  content: "";
+  position: absolute;
+  right: -0.05rem;
+  top: -0.15rem;
+  width: 0.3rem;
+  height: 0.3rem;
+  border-top: 2px solid rgba(51, 51, 51, 0.5);
+  border-right: 2px solid rgba(51, 51, 51, 0.5);
+  transform: rotate(45deg);
+}
+
+.demo-trophy {
+  font-size: 1.4rem;
+  line-height: 1;
+  color: #333333;
+}
+
+.demo-burst-board {
+  width: 2.45rem;
+  height: 2.45rem;
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.demo-burst-board .core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.56rem;
+  height: 0.56rem;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  background: rgba(255, 245, 223, 0.98);
+  box-shadow:
+    0 0 0 0.14rem rgba(255, 245, 223, 0.9),
+    0 0 0 0.34rem rgba(255, 214, 122, 0.28);
+}
+
+.demo-burst-board .ray {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1.92rem;
+  height: 3px;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0),
+    rgba(255, 197, 99, 0.92) 34%,
+    rgba(243, 108, 82, 0.58) 76%,
+    rgba(243, 108, 82, 0.06) 100%
+  );
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+  border-radius: 9999px;
+}
+
+.demo-burst-board .ray.r2 {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.demo-burst-board .ray.r3 {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.demo-burst-board .ray.r4 {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.demo-burst-board .ray.r5 {
+  width: 1.5rem;
+  transform: translate(-50%, -50%) rotate(22.5deg);
+}
+
+.demo-burst-board .ray.r6 {
+  width: 1.5rem;
+  transform: translate(-50%, -50%) rotate(-22.5deg);
+}
+
+.demo-burst-board .ray.r7 {
+  width: 1.5rem;
+  transform: translate(-50%, -50%) rotate(67.5deg);
+}
+
+.demo-burst-board .ray.r8 {
+  width: 1.5rem;
+  transform: translate(-50%, -50%) rotate(-67.5deg);
+}
+
+.demo-burst-board .ray.r2,
+.demo-burst-board .ray.r6 {
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0),
+    rgba(102, 153, 216, 0.9) 34%,
+    rgba(68, 133, 202, 0.52) 76%,
+    rgba(68, 133, 202, 0.06) 100%
+  );
+}
+
+.demo-burst-board .ray.r3,
+.demo-burst-board .ray.r7 {
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0),
+    rgba(108, 174, 134, 0.9) 34%,
+    rgba(78, 135, 104, 0.5) 76%,
+    rgba(78, 135, 104, 0.06) 100%
+  );
+}
+
+.demo-burst-board .ray.r4,
+.demo-burst-board .ray.r8 {
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0),
+    rgba(243, 108, 82, 0.9) 34%,
+    rgba(212, 108, 98, 0.52) 76%,
+    rgba(212, 108, 98, 0.06) 100%
+  );
+}
+
+.demo-burst-board .ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 9999px;
+  border: 2px dotted rgba(255, 197, 99, 0.34);
+  transform: translate(-50%, -50%);
+}
+
+.demo-burst-board .ring.ring-1 {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.demo-burst-board .ring.ring-2 {
+  width: 2.02rem;
+  height: 2.02rem;
+  border-color: rgba(68, 133, 202, 0.24);
+}
+
+.demo-burst-board .spark {
+  position: absolute;
+  width: 0.14rem;
+  height: 0.14rem;
+  border-radius: 9999px;
+  background: rgba(255, 197, 99, 0.72);
+  box-shadow: 0 0 0 1px rgba(243, 108, 82, 0.16);
+}
+
+.demo-burst-board .spark.s1 { left: 50%; top: 0.18rem; transform: translateX(-50%); }
+.demo-burst-board .spark.s2 { right: 0.22rem; top: 50%; transform: translateY(-50%); }
+.demo-burst-board .spark.s3 { left: 50%; bottom: 0.18rem; transform: translateX(-50%); }
+.demo-burst-board .spark.s4 { left: 0.22rem; top: 50%; transform: translateY(-50%); }
+.demo-burst-board .spark.s5 { right: 0.46rem; top: 0.46rem; }
+.demo-burst-board .spark.s6 { right: 0.46rem; bottom: 0.46rem; }
+.demo-burst-board .spark.s7 { left: 0.46rem; bottom: 0.46rem; }
+.demo-burst-board .spark.s8 { left: 0.46rem; top: 0.46rem; }
+
+.demo-chain-steps {
+  display: flex;
+  align-items: center;
+  gap: 0.18rem;
+}
+
+.demo-chain-step {
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.18rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.63rem;
+  font-weight: 700;
+  color: #333333;
+  background: rgba(51, 51, 51, 0.08);
+  border: 1px solid rgba(51, 51, 51, 0.08);
+  flex: 0 0 auto;
+}
+
+.demo-chain-step.s2 { background: rgba(243, 108, 82, 0.16); }
+.demo-chain-step.s3 { background: rgba(108, 174, 134, 0.16); }
+.demo-chain-step.s4 { background: rgba(255, 197, 99, 0.18); }
+.demo-chain-step.s5 { background: rgba(68, 133, 202, 0.14); }
+.demo-chain-step.s6 { background: rgba(243, 108, 82, 0.1); }
+.demo-chain-step.s7 { background: rgba(108, 174, 134, 0.1); }
+.demo-chain-step.s8 { background: rgba(68, 133, 202, 0.18); }
+
+.demo-center-mini {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.6rem;
+  position: relative;
+  overflow: hidden;
+  background: #e8decb;
+  flex: 0 0 auto;
+  box-shadow: 0 4px 10px rgba(51, 51, 51, 0.08);
+}
+
+.demo-center-mini .hub {
+  position: absolute;
+  inset: 34%;
+  border-radius: 9999px;
+  background: #f2ebd7;
+  z-index: 2;
+}
+
+.demo-center-mini .wedge {
+  position: absolute;
+  inset: 0;
+}
+
+.demo-center-mini .w1 { clip-path: polygon(0 0,50% 0,50% 50%); }
+.demo-center-mini .w2 { clip-path: polygon(50% 0,100% 0,50% 50%); }
+.demo-center-mini .w3 { clip-path: polygon(100% 0,100% 50%,50% 50%); }
+.demo-center-mini .w4 { clip-path: polygon(100% 50%,100% 100%,50% 50%); }
+.demo-center-mini .w5 { clip-path: polygon(100% 100%,50% 100%,50% 50%); }
+.demo-center-mini .w6 { clip-path: polygon(50% 100%,0 100%,50% 50%); }
+.demo-center-mini .w7 { clip-path: polygon(0 100%,0 50%,50% 50%); }
+.demo-center-mini .w8 { clip-path: polygon(0 50%,0 0,50% 50%); }
+
+.demo-center-mini .w1 { background: #F36C52; }
+.demo-center-mini .w2 { background: #EE8F7A; }
+.demo-center-mini .w3 { background: #6CAE86; }
+.demo-center-mini .w4 { background: #86C09D; }
+.demo-center-mini .w5 { background: #FFC563; }
+.demo-center-mini .w6 { background: #F0CD78; }
+.demo-center-mini .w7 { background: #4485CA; }
+.demo-center-mini .w8 { background: #6699D8; }
+
+.demo-center-mini[data-fill="2"] .w3,
+.demo-center-mini[data-fill="2"] .w4,
+.demo-center-mini[data-fill="2"] .w5,
+.demo-center-mini[data-fill="2"] .w6,
+.demo-center-mini[data-fill="2"] .w7,
+.demo-center-mini[data-fill="2"] .w8,
+.demo-center-mini[data-fill="3"] .w4,
+.demo-center-mini[data-fill="3"] .w5,
+.demo-center-mini[data-fill="3"] .w6,
+.demo-center-mini[data-fill="3"] .w7,
+.demo-center-mini[data-fill="3"] .w8,
+.demo-center-mini[data-fill="4"] .w5,
+.demo-center-mini[data-fill="4"] .w6,
+.demo-center-mini[data-fill="4"] .w7,
+.demo-center-mini[data-fill="4"] .w8,
+.demo-center-mini[data-fill="5"] .w6,
+.demo-center-mini[data-fill="5"] .w7,
+.demo-center-mini[data-fill="5"] .w8,
+.demo-center-mini[data-fill="6"] .w7,
+.demo-center-mini[data-fill="6"] .w8,
+.demo-center-mini[data-fill="7"] .w8 {
+  background: #e6ddd0;
+}
+
+.demo-center-stage {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.6rem;
+  position: relative;
+  overflow: hidden;
+  background: #e8decb;
+  flex: 0 0 auto;
+  box-shadow: 0 4px 10px rgba(51, 51, 51, 0.08);
+}
+
+.demo-center-stage .hub {
+  position: absolute;
+  inset: 34%;
+  border-radius: 9999px;
+  background: #f2ebd7;
+  z-index: 2;
+}
+
+.demo-center-stage.stage-4 {
+  background:
+    conic-gradient(
+      from -90deg,
+      #F36C52 0deg 90deg,
+      #6CAE86 90deg 180deg,
+      #FFC563 180deg 270deg,
+      #4485CA 270deg 360deg
+    );
+}
+
+.demo-center-stage.stage-8 {
+  background:
+    conic-gradient(
+      from -90deg,
+      #F36C52 0deg 45deg,
+      #EE8F7A 45deg 90deg,
+      #6CAE86 90deg 135deg,
+      #86C09D 135deg 180deg,
+      #FFC563 180deg 225deg,
+      #F0CD78 225deg 270deg,
+      #4485CA 270deg 315deg,
+      #6699D8 315deg 360deg
+    );
+}
+
+.demo-center-stage.stage-12 {
+  background:
+    conic-gradient(
+      from -90deg,
+      #F36C52 0deg 30deg,
+      #EE8F7A 30deg 60deg,
+      #D46C62 60deg 90deg,
+      #6CAE86 90deg 120deg,
+      #86C09D 120deg 150deg,
+      #4E8768 150deg 180deg,
+      #FFC563 180deg 210deg,
+      #F0CD78 210deg 240deg,
+      #D7A24A 240deg 270deg,
+      #4485CA 270deg 300deg,
+      #6699D8 300deg 330deg,
+      #315E97 330deg 360deg
+    );
+}
+
+.demo-center-stage.stage-16 {
+  background:
+    conic-gradient(
+      from -90deg,
+      #F36C52 0deg 22.5deg,
+      #EE8F7A 22.5deg 45deg,
+      #B84838 45deg 67.5deg,
+      #D46C62 67.5deg 90deg,
+      #6CAE86 90deg 112.5deg,
+      #86C09D 112.5deg 135deg,
+      #4E8768 135deg 157.5deg,
+      #6EAA84 157.5deg 180deg,
+      #FFC563 180deg 202.5deg,
+      #F0CD78 202.5deg 225deg,
+      #D7A24A 225deg 247.5deg,
+      #E3BA69 247.5deg 270deg,
+      #4485CA 270deg 292.5deg,
+      #6699D8 292.5deg 315deg,
+      #315E97 315deg 337.5deg,
+      #4F79AF 337.5deg 360deg
+    );
+}
+
+.demo-stage-sequence {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  flex-wrap: nowrap;
+}
+
+.demo-stage-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.22rem;
+}
+
+.demo-stage-card span {
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(51, 51, 51, 0.7);
+}
+
+.demo-stage-sequence .demo-arrow {
+  font-size: 0.88rem;
+  color: rgba(51, 51, 51, 0.56);
+}
+</style>
+</head>
+
+<body class="min-h-screen bg-[#f2ebd7] text-[#333333] flex items-center justify-center p-4">
+<div id="start-screen" class="fixed inset-0 bg-[#f2ebd7] text-[#333333] flex items-center justify-center z-30 p-6">
+  <div class="start-flow">
+    <div class="start-hero start-enter-left">
+    <h1 class="text-4xl font-bold tracking-tight">SLANT /</h1>
+    </div>
+
+    <div class="start-rules">
+      <div class="start-rule table-row start-enter-down">
+        <div class="start-label">ROTATE</div>
+        <div class="start-demo">
+          <div class="demo-tile demo-tile-l1-ry"></div>
+          <div class="demo-overlay-wrap">
+            <div class="demo-tile demo-tile-l1-by"></div>
+            <div class="demo-rotate-overlay">↻</div>
+          </div>
+          <div class="demo-tile demo-tile-l1-bg"></div>
+        </div>
+      </div>
+
+      <div class="start-rule table-row start-enter-down">
+        <div class="start-label">MATCH</div>
+        <div class="start-demo">
+          <div class="demo-tile demo-tile-l1-ry"></div>
+          <div class="demo-tile demo-tile-l1-by demo-rotated"></div>
+          <div class="demo-tile demo-tile-l1-bg"></div>
+          <div class="demo-arrow">→</div>
+          <div class="demo-tile demo-tile-l2"><span class="quad-a"></span><span class="quad-b"></span></div>
+        </div>
+      </div>
+
+      <div class="start-rule table-row start-enter-down">
+        <div class="start-label">CHAIN</div>
+        <div class="start-demo">
+          <div class="demo-tile demo-tile-l2 demo-rotated-180"><span class="quad-a"></span><span class="quad-b"></span></div>
+          <div class="demo-tile demo-tile-l2"><span class="quad-a"></span><span class="quad-b"></span></div>
+          <div class="demo-tile demo-tile-l2 demo-rotated-180"><span class="quad-a"></span><span class="quad-b"></span></div>
+          <div class="demo-tile demo-tile-l2"><span class="quad-a"></span><span class="quad-b"></span></div>
+          <div class="demo-arrow">→</div>
+          <div class="demo-center demo-full">
+            <span class="wedge w1"></span><span class="wedge w2"></span><span class="wedge w3"></span><span class="wedge w4"></span>
+            <span class="wedge w5"></span><span class="wedge w6"></span><span class="wedge w7"></span><span class="wedge w8"></span>
+            <span class="hub"></span>
+          </div>
+          <div class="demo-arrow">→</div>
+          <div class="demo-center demo-full demo-center-ready">
+            <span class="wedge w1"></span><span class="wedge w2"></span><span class="wedge w3"></span><span class="wedge w4"></span>
+            <span class="wedge w5"></span><span class="wedge w6"></span><span class="wedge w7"></span><span class="wedge w8"></span>
+            <span class="charge-tick t1"></span><span class="charge-tick t2"></span><span class="charge-tick t3"></span><span class="charge-tick t4"></span>
+            <span class="charge-tick t5"></span><span class="charge-tick t6"></span><span class="charge-tick t7"></span><span class="charge-tick t8"></span>
+            <span class="hub"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="start-rule table-row start-enter-down">
+        <div class="start-label">WIN</div>
+        <div class="start-demo flex-col items-center justify-center gap-2 !h-auto py-1 !flex-[0_0_auto]">
+          <div class="demo-stage-sequence">
+            <div class="demo-stage-card">
+              <div class="demo-center-stage stage-4"><span class="hub"></span></div>
+              <span>4</span>
+            </div>
+            <div class="demo-arrow">→</div>
+            <div class="demo-stage-card">
+              <div class="demo-center-stage stage-8"><span class="hub"></span></div>
+              <span>8</span>
+            </div>
+            <div class="demo-arrow">→</div>
+            <div class="demo-stage-card">
+              <div class="demo-center-stage stage-12"><span class="hub"></span></div>
+              <span>12</span>
+            </div>
+            <div class="demo-arrow">→</div>
+            <div class="demo-stage-card">
+              <div class="demo-center-stage stage-16"><span class="hub"></span></div>
+              <span>16</span>
+            </div>
+            <div class="demo-arrow">→</div>
+            <div class="demo-trophy">🏆</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="start-cta start-enter-left">
+    <button id="start-button"
+      class="inline-flex w-[78%] items-center justify-center px-8 py-3 rounded-2xl bg-[#333333] text-[#f2ebd7] text-base font-semibold shadow-[0_10px_22px_rgba(51,51,51,0.14)]">
+      START
+    </button>
+    </div>
+  </div>
+</div>
+
+<div id="game-screen" class="w-full max-w-sm mx-auto hidden">
+
+  <div id="goal-bar" class="intro-ui-fade-in flex items-center justify-between gap-3 text-xs font-medium mb-2 text-[#555555]">
+    <span id="goal-value" class="tracking-[0.08em]">CHAIN 4</span>
+    <span id="goal-detail" class="text-right text-[11px] text-[#6b655d] min-h-[1rem]"></span>
+  </div>
+
+  <div id="board-shell" class="relative">
+    <div id="board-shell-vignette"></div>
+    <div id="game-board" class="grid grid-cols-5 gap-[5px] w-full"></div>
+  </div>
+
+</div>
+
+<div id="game-over-overlay"
+     class="fixed inset-0 bg-black/70 flex items-center justify-center z-20 hidden">
+  <div class="bg-slate-800 border border-slate-700 rounded-2xl px-6 py-5 max-w-xs w-full text-center shadow-xl">
+    <h2 class="text-2xl font-extrabold tracking-wide mb-2 text-red-400">GAME OVER</h2>
+    <p class="text-xs text-slate-300 mb-4">No more legal moves.</p>
+    <button id="restart-button"
+      class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-900 text-sm font-semibold transition">
+      Play Again
+    </button>
+  </div>
+</div>
+
+<div id="win-overlay"
+     class="fixed inset-0 bg-black/70 flex items-center justify-center z-20 hidden">
+  <div class="bg-[#f2ebd7] border border-[#333333] rounded-2xl px-6 py-5 max-w-xs w-full text-center shadow-xl text-[#333333]">
+    <h2 class="text-2xl font-extrabold tracking-wide mb-2">YOU WIN</h2>
+    <p class="text-sm mb-4">The center is complete.</p>
+    <div class="flex gap-2 justify-center">
+      <button id="keep-playing-button"
+        class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-[#333333] text-[#f2ebd7] text-sm font-semibold transition">
+        Keep Playing
+      </button>
+      <button id="new-run-button"
+        class="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-[#333333] text-[#333333] text-sm font-semibold transition">
+        New Run
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOTAL_ROWS = 9;
+const GRID_COLS = 5;
+const CENTER_ROW = Math.floor(TOTAL_ROWS / 2);
+const CENTER_COL = Math.floor(GRID_COLS / 2);
+
+const COLORS = [
+  "#F36C52",
+  "#4485CA",
+  "#6CAE86",
+  "#FFC563"
+];
+const L1_COLOR_PAIRS = [
+  [0, 1],
+  [0, 2],
+  [0, 3],
+  [1, 2],
+  [1, 3],
+  [2, 3],
+];
+const L2_CANONICAL_COLORS = [
+  COLORS[0],
+  COLORS[1],
+  COLORS[2],
+  COLORS[3],
+];
+const KALEIDOSCOPE_COLORS = [
+  COLORS[0], "#EE8F7A",
+  COLORS[2], "#86C09D",
+  COLORS[3], "#F0CD78",
+  COLORS[1], "#6699D8",
+];
+
+const STAGE_MILESTONES = [
+  { goal: 4, rows: 5 },
+  { goal: 8, rows: 7 },
+  { goal: 12, rows: 7 },
+  { goal: 16, rows: 9 },
+];
+const CENTER_TRIGGER_ANTICIPATION_MS = 180;
+const CENTER_SLAM_MS = 150;
+const SPAWN_POP_DURATION_MS = 320;
+const INTRO_POP_DURATION_MS = 460;
+const START_FADE_OUT_MS = 340;
+const INTRO_FADEIN_DURATION_MS = 560;
+const INTRO_PRECHARGE_HOLD_MS = 360;
+const INTRO_CHARGE_DURATION_MS = 1600;
+const INTRO_OVERLOAD_DURATION_MS = 460;
+const INTRO_LAUNCH_DURATION_MS = 220;
+const INTRO_SLAM_DURATION_MS = 180;
+const INTRO_SPREAD_LEAD_MS = 220;
+const INTRO_GROUP_STEP_MS = 240;
+const INTRO_CELL_STAGGER_MS = 46;
+const INTRO_SETTLE_HOLD_MS = 520;
+const BOARD_CLEAR_ANIMATION_MS = 600;
+const BURST_CENTER_PULSE_MS = 240;
+const BURST_CENTER_TO_SPIN_HOLD_MS = 90;
+const BURST_SPIN_DURATION_MS = 340;
+const BURST_SPIN_TO_EXPLODE_HOLD_MS = 90;
+const BURST_EXPLODE_DURATION_MS = 320;
+const BURST_CLEAR_HOLD_MS = 180;
+const BURST_STAGGER_MAX_MS = 70;
+const BURST_TRAVEL_BASE = 0.18;
+const BURST_TRAVEL_MIN_MULTIPLIER = 0.9;
+const BURST_TRAVEL_MAX_MULTIPLIER = 1.5;
+const MERGE_HIGHLIGHT_MS = 150;
+const MERGE_INWARD_MS = 220;
+const MERGE_SETTLE_MS = 120;
+const ROTATION_SETTLE_MS = 210;
+const TILE_TURN_SOUND_PATH = "/Users/jonathanmoyer/Desktop/tile-turn.wav";
+const TILE_MERGE_SOUND_PATH = "/Users/jonathanmoyer/Desktop/tile-click.wav";
+
+const TILE_TYPE = {
+  L1: "L1",
+  L2: "L2",
+  CENTER: "CENTER",
+};
+
+let board = [];
+let gameOver = false;
+let animating = false;
+let centerState = "idle";
+let currentMilestoneIndex = 0;
+let requiredConnections = STAGE_MILESTONES[0].goal;
+let activeRowCount = STAGE_MILESTONES[0].rows;
+let finalWinAchieved = false;
+let keepPlayingAfterWin = false;
+let coreOverloading = false;
+let coreBursting = false;
+let tileTurnAudio = null;
+let tileMergeAudio = null;
+let introActive = false;
+let introPhase = "none";
+let introVisibleCells = new Set();
+let introRevealProgress = 0;
+let introCenterFadeProgress = 0;
+let introCenterFadeFrame = null;
+let centerReadySettleTimer = null;
+
+function randomColorIndex() {
+  return Math.floor(Math.random() * COLORS.length);
+}
+
+function colorAtIndex(i) {
+  return COLORS[i % COLORS.length];
+}
+
+function playTileTurnSound() {
+  if (!tileTurnAudio) return;
+  const audio = tileTurnAudio.cloneNode();
+  audio.volume = tileTurnAudio.volume;
+  audio.currentTime = 0;
+  audio.play().catch(() => {});
+}
+
+function playTileMergeSound() {
+  if (!tileMergeAudio) return;
+  const audio = tileMergeAudio.cloneNode();
+  audio.volume = tileMergeAudio.volume;
+  audio.currentTime = 0;
+  audio.play().catch(() => {});
+}
+
+function isCenterCell(r, c) {
+  return r === CENTER_ROW && c === CENTER_COL;
+}
+
+function getVisibleRowStart(rowCount = activeRowCount) {
+  return Math.floor((TOTAL_ROWS - rowCount) / 2);
+}
+
+function getVisibleRowEnd(rowCount = activeRowCount) {
+  return getVisibleRowStart(rowCount) + rowCount - 1;
+}
+
+function isVisibleCell(r, c) {
+  return c >= 0 && c < GRID_COLS && r >= getVisibleRowStart() && r <= getVisibleRowEnd();
+}
+
+function syncStageMilestoneState() {
+  const milestone = STAGE_MILESTONES[currentMilestoneIndex];
+  requiredConnections = milestone.goal;
+  activeRowCount = milestone.rows;
+}
+
+function clamp01(value) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function hexToRgb(color) {
+  const hex = color.replace("#", "");
+  const normalized = hex.length === 3
+    ? hex.split("").map((ch) => ch + ch).join("")
+    : hex;
+
+  return {
+    r: parseInt(normalized.slice(0, 2), 16),
+    g: parseInt(normalized.slice(2, 4), 16),
+    b: parseInt(normalized.slice(4, 6), 16),
+  };
+}
+
+function mixHexColors(from, to, amount) {
+  const t = clamp01(amount);
+  const a = hexToRgb(from);
+  const b = hexToRgb(to);
+  const r = Math.round(a.r + ((b.r - a.r) * t));
+  const g = Math.round(a.g + ((b.g - a.g) * t));
+  const bChannel = Math.round(a.b + ((b.b - a.b) * t));
+  return `rgb(${r}, ${g}, ${bChannel})`;
+}
+
+function shouldRenderCell(r, c) {
+  if (!isVisibleCell(r, c)) return false;
+  if (!introActive) return true;
+  return isCenterCell(r, c) || introVisibleCells.has(`${r},${c}`);
+}
+
+class Tile {
+  constructor(type, colorIndex, rot = 0) {
+    this.type = type;
+    this.colorIndex = colorIndex;
+    this.rot = rot;
+    this.visualTurns = rot;
+    this.qColors = null;
+    this.pairIndices = null;
+    this.justSpawned = false;
+  }
+
+  getEdges() {
+    if (this.type === TILE_TYPE.L1) {
+      const pair = this.pairIndices || [this.colorIndex, (this.colorIndex + 1) % COLORS.length];
+      const c1 = colorAtIndex(pair[0]);
+      const c2 = colorAtIndex(pair[1]);
+      const base = [c1, c2, c2, c1];
+      const r = ((this.rot % 4) + 4) % 4;
+      const idx = (i) => (i - r + 4) % 4;
+
+      return {
+        top: base[idx(0)],
+        right: base[idx(1)],
+        bottom: base[idx(2)],
+        left: base[idx(3)],
+      };
+    }
+
+    if (this.type === TILE_TYPE.L2) {
+      const base = this.qColors || [...L2_CANONICAL_COLORS];
+      const r = ((this.rot % 4) + 4) % 4;
+      const idx = (i) => (i - r + 4) % 4;
+
+      return {
+        top: base[idx(0)],
+        right: base[idx(1)],
+        bottom: base[idx(2)],
+        left: base[idx(3)],
+      };
+    }
+
+    return { top: null, right: null, bottom: null, left: null };
+  }
+}
+
+function createRandomL1Tile() {
+  const pair = L1_COLOR_PAIRS[Math.floor(Math.random() * L1_COLOR_PAIRS.length)];
+  const rot = Math.floor(Math.random() * 4);
+  const tile = new Tile(TILE_TYPE.L1, pair[0], rot);
+  tile.pairIndices = [...pair];
+  tile.justSpawned = true;
+  return tile;
+}
+
+function createCenterTile() {
+  return new Tile(TILE_TYPE.CENTER, 0, 0);
+}
+
+function createCanonicalL2Colors() {
+  return [...L2_CANONICAL_COLORS];
+}
+
+function createBoardForCurrentStage() {
+  const nextBoard = [];
+  for (let r = 0; r < TOTAL_ROWS; r++) {
+    const row = [];
+    for (let c = 0; c < GRID_COLS; c++) {
+      if (isCenterCell(r, c)) {
+        row.push(createCenterTile());
+      } else if (isVisibleCell(r, c)) {
+        row.push(createRandomL1Tile());
+      } else {
+        row.push(null);
+      }
+    }
+    nextBoard.push(row);
+  }
+  return nextBoard;
+}
+
+function buildValidatedOpeningBoard() {
+  let attempts = 0;
+  do {
+    board = createBoardForCurrentStage();
+    attempts += 1;
+  } while (!hasMoves() && attempts < 80);
+}
+
+function getIntroRevealGroups() {
+  const groups = new Map();
+
+  for (let r = getVisibleRowStart(); r <= getVisibleRowEnd(); r++) {
+    for (let c = 0; c < GRID_COLS; c++) {
+      if (isCenterCell(r, c)) continue;
+      const distance = Math.round(Math.hypot(r - CENTER_ROW, c - CENTER_COL) * 10) / 10;
+      const key = distance.toFixed(1);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push({ r, c });
+    }
+  }
+
+  return [...groups.entries()]
+    .sort((a, b) => Number(a[0]) - Number(b[0]))
+    .map(([, cells]) => cells.sort((a, b) => {
+      const angleA = Math.atan2(a.r - CENTER_ROW, a.c - CENTER_COL);
+      const angleB = Math.atan2(b.r - CENTER_ROW, b.c - CENTER_COL);
+      return angleA - angleB;
+    }));
+}
+
+function clearIntroShellState() {
+  const shell = document.getElementById("board-shell");
+  if (!shell) return;
+  shell.classList.remove("opening-focus", "opening-spread", "board-impact", "center-ready-mode", "center-ready-enter");
+}
+
+function stopIntroCenterFade() {
+  if (introCenterFadeFrame !== null) {
+    cancelAnimationFrame(introCenterFadeFrame);
+    introCenterFadeFrame = null;
+  }
+}
+
+function animateIntroCenterFade(durationMs) {
+  stopIntroCenterFade();
+
+  if (durationMs <= 0) {
+    introCenterFadeProgress = 1;
+    renderTile(CENTER_ROW, CENTER_COL);
+    return;
+  }
+
+  const start = performance.now();
+
+  const tick = (now) => {
+    const elapsed = now - start;
+    introCenterFadeProgress = clamp01(elapsed / durationMs);
+    renderTile(CENTER_ROW, CENTER_COL);
+
+    if (introCenterFadeProgress < 1 && introActive && introPhase === "spread") {
+      introCenterFadeFrame = requestAnimationFrame(tick);
+    } else {
+      introCenterFadeFrame = null;
+    }
+  };
+
+  introCenterFadeFrame = requestAnimationFrame(tick);
+}
+
+function triggerReadyModeSettle(shell) {
+  if (!shell) return;
+  shell.classList.remove("center-ready-enter");
+  void shell.offsetWidth;
+  shell.classList.add("center-ready-enter");
+  if (centerReadySettleTimer) clearTimeout(centerReadySettleTimer);
+  centerReadySettleTimer = setTimeout(() => {
+    shell.classList.remove("center-ready-enter");
+  }, 240);
+}
+
+function syncCenterReadyMode() {
+  const shell = document.getElementById("board-shell");
+  if (!shell) return;
+
+  const ready = getCenterState() === "ready" && !introActive && !gameOver;
+  const wasReady = shell.classList.contains("center-ready-mode");
+
+  shell.classList.toggle("center-ready-mode", ready);
+
+  if (ready && !wasReady) {
+    triggerReadyModeSettle(shell);
+  } else if (!ready) {
+    shell.classList.remove("center-ready-enter");
+    if (centerReadySettleTimer) {
+      clearTimeout(centerReadySettleTimer);
+      centerReadySettleTimer = null;
+    }
+  }
+}
+
+function setIntroHUDVisibility(visible) {
+  const goalBar = document.getElementById("goal-bar");
+  if (!goalBar) return;
+  goalBar.classList.toggle("intro-ui-hidden", !visible);
+}
+
+function playBoardIntro() {
+  const shell = document.getElementById("board-shell");
+  const revealGroups = getIntroRevealGroups();
+  const revealSequence = revealGroups.flatMap((group) => group);
+  const spreadStart =
+    INTRO_FADEIN_DURATION_MS +
+    INTRO_PRECHARGE_HOLD_MS +
+    INTRO_CHARGE_DURATION_MS +
+    INTRO_OVERLOAD_DURATION_MS +
+    INTRO_LAUNCH_DURATION_MS +
+    INTRO_SLAM_DURATION_MS;
+  const revealStart = spreadStart + INTRO_SPREAD_LEAD_MS;
+  const finalRevealDelay = revealSequence.length === 0
+    ? revealStart
+    : revealStart
+      + ((revealGroups.length - 1) * INTRO_GROUP_STEP_MS)
+      + ((revealGroups[revealGroups.length - 1].length - 1) * INTRO_CELL_STAGGER_MS);
+  const endDelay = finalRevealDelay + INTRO_SETTLE_HOLD_MS;
+
+  introActive = true;
+  introPhase = "fadein";
+  introVisibleCells = new Set();
+  introRevealProgress = 0;
+  introCenterFadeProgress = 0;
+  animating = true;
+  status("");
+  stopIntroCenterFade();
+  clearIntroShellState();
+  setIntroHUDVisibility(false);
+  renderBoard();
+
+  setTimeout(() => {
+    introPhase = "charge";
+    renderTile(CENTER_ROW, CENTER_COL);
+  }, INTRO_FADEIN_DURATION_MS + INTRO_PRECHARGE_HOLD_MS);
+
+  setTimeout(() => {
+    introPhase = "overload";
+    if (shell) shell.classList.add("opening-focus");
+    renderTile(CENTER_ROW, CENTER_COL);
+  }, INTRO_FADEIN_DURATION_MS + INTRO_PRECHARGE_HOLD_MS + INTRO_CHARGE_DURATION_MS);
+
+  setTimeout(() => {
+    introPhase = "launch";
+    renderTile(CENTER_ROW, CENTER_COL);
+  }, INTRO_FADEIN_DURATION_MS + INTRO_PRECHARGE_HOLD_MS + INTRO_CHARGE_DURATION_MS + INTRO_OVERLOAD_DURATION_MS);
+
+  setTimeout(() => {
+    introPhase = "slam";
+    renderTile(CENTER_ROW, CENTER_COL);
+    if (shell) {
+      shell.classList.remove("board-impact");
+      void shell.offsetWidth;
+      shell.classList.add("board-impact");
+    }
+  }, INTRO_FADEIN_DURATION_MS + INTRO_PRECHARGE_HOLD_MS + INTRO_CHARGE_DURATION_MS + INTRO_OVERLOAD_DURATION_MS + INTRO_LAUNCH_DURATION_MS);
+
+  setTimeout(() => {
+    introPhase = "spread";
+    if (shell) {
+      shell.classList.remove("opening-focus");
+      shell.classList.add("opening-spread");
+      shell.classList.remove("board-impact");
+    }
+    animateIntroCenterFade(endDelay - spreadStart);
+    renderTile(CENTER_ROW, CENTER_COL);
+  }, spreadStart);
+
+  let revealedCount = 0;
+  revealGroups.forEach((group, groupIndex) => {
+    group.forEach((cell, cellIndex) => {
+      const delay = revealStart + (groupIndex * INTRO_GROUP_STEP_MS) + (cellIndex * INTRO_CELL_STAGGER_MS);
+      setTimeout(() => {
+        introVisibleCells.add(`${cell.r},${cell.c}`);
+        revealedCount += 1;
+        introRevealProgress = clamp01(revealedCount / revealSequence.length);
+        renderTile(cell.r, cell.c);
+        renderTile(CENTER_ROW, CENTER_COL);
+      }, delay);
+    });
+  });
+  setTimeout(() => {
+    introActive = false;
+    introPhase = "none";
+    introVisibleCells.clear();
+    introRevealProgress = 1;
+    introCenterFadeProgress = 1;
+    stopIntroCenterFade();
+    clearIntroShellState();
+    renderBoard();
+    animating = false;
+    setIntroHUDVisibility(true);
+    status(`Build a chain of ${requiredConnections} tiles.`);
+    if (!hasMoves()) {
+      buildValidatedOpeningBoard();
+      renderBoard();
+    }
+  }, endDelay);
+}
+
+function initBoard(playIntro = false) {
+  buildValidatedOpeningBoard();
+  if (playIntro) {
+    playBoardIntro();
+  } else {
+    introActive = false;
+    introPhase = "none";
+    introVisibleCells.clear();
+    introRevealProgress = 0;
+    setIntroHUDVisibility(true);
+    renderBoard();
+  }
+}
+
+function appendTriangle(container, className, color, clipPath, styleFn) {
+  const piece = document.createElement("div");
+  piece.className = className;
+  piece.style.backgroundColor = color;
+  piece.style.clipPath = clipPath;
+  styleFn(piece);
+  container.appendChild(piece);
+}
+
+function renderL2Face(art, tile, turns) {
+  const base = tile.qColors || [...L2_CANONICAL_COLORS];
+
+  appendTriangle(art, "absolute inset-x-0 top-0", base[0], "polygon(0 0,100% 0,50% 100%)", (el) => {
+    el.style.height = "50%";
+  });
+  appendTriangle(art, "absolute inset-y-0 right-0", base[1], "polygon(100% 0,100% 100%,0 50%)", (el) => {
+    el.style.width = "50%";
+  });
+  appendTriangle(art, "absolute inset-x-0 bottom-0", base[2], "polygon(0 100%,100% 100%,50% 0)", (el) => {
+    el.style.height = "50%";
+  });
+  appendTriangle(art, "absolute inset-y-0 left-0", base[3], "polygon(0 0,0 100%,100% 50%)", (el) => {
+    el.style.width = "50%";
+  });
+
+  art.style.transform = `rotate(${turns}deg)`;
+}
+
+function populateEightWedgeFace(container, colors) {
+  const wedges = [
+    { color: colors[0], clip: "polygon(0 0,50% 0,50% 50%)" },
+    { color: colors[1], clip: "polygon(50% 0,100% 0,50% 50%)" },
+    { color: colors[2], clip: "polygon(100% 0,100% 50%,50% 50%)" },
+    { color: colors[3], clip: "polygon(100% 50%,100% 100%,50% 50%)" },
+    { color: colors[4], clip: "polygon(100% 100%,50% 100%,50% 50%)" },
+    { color: colors[5], clip: "polygon(50% 100%,0 100%,50% 50%)" },
+    { color: colors[6], clip: "polygon(0 100%,0 50%,50% 50%)" },
+    { color: colors[7], clip: "polygon(0 50%,0 0,50% 50%)" },
+  ];
+
+  wedges.forEach((wedge) => {
+    appendTriangle(container, "absolute inset-0", wedge.color, wedge.clip, () => {});
+  });
+}
+
+function getCenterFillColors(segmentCount) {
+  if (segmentCount === 4) {
+    return [
+      COLORS[0],
+      COLORS[2],
+      COLORS[3],
+      COLORS[1],
+    ];
+  }
+
+  if (segmentCount === 8) {
+    return [...KALEIDOSCOPE_COLORS];
+  }
+
+  return [
+    "#F36C52", "#EE8F7A", "#6CAE86", "#86C09D",
+    "#FFC563", "#F0CD78", "#4485CA", "#6699D8",
+    "#B84838", "#D46C62", "#4E8768", "#6EAA84",
+    "#D7A24A", "#E3BA69", "#315E97", "#4F79AF",
+  ];
+}
+
+function getCenterPreviewColors(segmentCount) {
+  if (segmentCount === 4) {
+    return [
+      "rgba(243, 108, 82, 0.78)",
+      "rgba(108, 174, 134, 0.78)",
+      "rgba(255, 197, 99, 0.8)",
+      "rgba(68, 133, 202, 0.78)",
+    ];
+  }
+
+  if (segmentCount === 8) {
+    return [
+      "rgba(243, 108, 82, 0.78)",
+      "rgba(238, 143, 122, 0.78)",
+      "rgba(108, 174, 134, 0.78)",
+      "rgba(134, 192, 157, 0.78)",
+      "rgba(255, 197, 99, 0.8)",
+      "rgba(240, 205, 120, 0.78)",
+      "rgba(68, 133, 202, 0.78)",
+      "rgba(102, 153, 216, 0.78)",
+    ];
+  }
+
+  return [
+    "rgba(243, 108, 82, 0.82)", "rgba(238, 143, 122, 0.78)",
+    "rgba(108, 174, 134, 0.82)", "rgba(134, 192, 157, 0.78)",
+    "rgba(255, 197, 99, 0.82)", "rgba(240, 205, 120, 0.78)",
+    "rgba(68, 133, 202, 0.82)", "rgba(102, 153, 216, 0.78)",
+    "rgba(184, 72, 56, 0.82)", "rgba(212, 108, 98, 0.78)",
+    "rgba(78, 135, 104, 0.82)", "rgba(110, 170, 132, 0.78)",
+    "rgba(215, 162, 74, 0.82)", "rgba(227, 186, 105, 0.78)",
+    "rgba(49, 94, 151, 0.82)", "rgba(79, 121, 175, 0.78)",
+  ];
+}
+
+function getCenterEmptyColors(segmentCount) {
+  if (segmentCount === 4) {
+    return [
+      "#EAC8BC",
+      "#C9E2D4",
+      "#F4E0AF",
+      "#C7D9F0",
+    ];
+  }
+
+  if (segmentCount === 8) {
+    return [
+      "#EAC8BC", "#EFD5CB",
+      "#C9E2D4", "#D7EBDD",
+      "#F4E0AF", "#F7E9C8",
+      "#C7D9F0", "#D8E4F5",
+    ];
+  }
+
+  return [
+    "#EAC8BC", "#EFD5CB", "#C9E2D4", "#D7EBDD",
+    "#F4E0AF", "#F7E9C8", "#C7D9F0", "#D8E4F5",
+    "#DFC1B6", "#E6CDC4", "#BED8CB", "#CCE2D6",
+    "#EED7AA", "#F3E1BF", "#BACEE8", "#CBDAEE",
+  ];
+}
+
+function getLargestChainSize() {
+  const clusters = findAllL2Clusters(1);
+  if (clusters.length === 0) return 0;
+  return Math.max(...clusters.map((cluster) => cluster.length));
+}
+
+function getDerivedCenterState() {
+  const largestChainSize = getLargestChainSize();
+  if (largestChainSize >= requiredConnections) return "ready";
+  if (largestChainSize > 0) return "charging";
+  return "idle";
+}
+
+function getCenterState() {
+  if (centerState === "triggered" || centerState === "resolving") {
+    return centerState;
+  }
+  return getDerivedCenterState();
+}
+
+function getVisibleCenterProgress() {
+  if (centerState === "triggered" || centerState === "resolving") return requiredConnections;
+  return Math.min(getLargestChainSize(), requiredConnections);
+}
+
+function renderIntroCenterQuadrants(container, colors, animate = false, fadeMultiplier = 1) {
+  const quadrantDefs = [
+    { color: colors[0], className: "absolute left-0 top-0", delay: 0, style: (el) => { el.style.width = "50%"; el.style.height = "50%"; } },
+    { color: colors[1], className: "absolute right-0 top-0", delay: 180, style: (el) => { el.style.width = "50%"; el.style.height = "50%"; } },
+    { color: colors[3], className: "absolute left-0 bottom-0", delay: 540, style: (el) => { el.style.width = "50%"; el.style.height = "50%"; } },
+    { color: colors[2], className: "absolute right-0 bottom-0", delay: 360, style: (el) => { el.style.width = "50%"; el.style.height = "50%"; } },
+  ];
+
+  quadrantDefs.forEach((def) => {
+    const piece = document.createElement("div");
+    piece.className = def.className;
+    piece.style.backgroundColor = def.color;
+    def.style(piece);
+    if (animate) {
+      piece.classList.add("intro-charge-segment");
+      piece.style.animationDelay = `${def.delay}ms`;
+      piece.style.opacity = "0";
+    } else if (fadeMultiplier < 1) {
+      piece.style.opacity = `${fadeMultiplier}`;
+    }
+    container.appendChild(piece);
+  });
+}
+
+function renderCenterFace(face, art) {
+  face.style.backgroundColor = "#e8decb";
+  face.style.border = "none";
+  face.style.boxShadow = "none";
+  const emptyColors = getCenterEmptyColors(requiredConnections);
+  const previewColors = getCenterPreviewColors(requiredConnections);
+  const fillColors = getCenterFillColors(requiredConnections);
+  const visibleProgress = getVisibleCenterProgress();
+  const currentCenterState = getCenterState();
+  const step = 360 / requiredConnections;
+  const gradientForColors = (colors) => colors.map((color, index) => {
+    const start = index * step;
+    const end = (index + 1) * step;
+    return `${color} ${start}deg ${end}deg`;
+  }).join(", ");
+
+  const baseLayer = document.createElement("div");
+  baseLayer.className = "absolute inset-0";
+
+  if (introActive) {
+    const introFade = clamp01(introCenterFadeProgress);
+    const introPhaseUsesChargedColors =
+      introPhase === "charge" ||
+      introPhase === "overload" ||
+      introPhase === "launch" ||
+      introPhase === "slam" ||
+      introPhase === "spread";
+
+    if (requiredConnections === 4) {
+      renderIntroCenterQuadrants(art, emptyColors, false, 1);
+
+      if (introPhaseUsesChargedColors) {
+        const chargedLayer = document.createElement("div");
+        chargedLayer.className = "absolute inset-0";
+
+        if (introPhase === "charge") {
+          renderIntroCenterQuadrants(chargedLayer, fillColors, true, 1);
+        } else {
+          const fadeMultiplier = introPhase === "spread"
+            ? Math.max(0, 1 - (introFade * 1.02))
+            : 1;
+          renderIntroCenterQuadrants(chargedLayer, fillColors, false, fadeMultiplier);
+        }
+
+        art.appendChild(chargedLayer);
+      }
+    } else {
+      baseLayer.style.background = `conic-gradient(from -90deg, ${gradientForColors(emptyColors)})`;
+      art.appendChild(baseLayer);
+
+      if (introPhaseUsesChargedColors) {
+        const chargedLayer = document.createElement("div");
+        chargedLayer.className = "absolute inset-0";
+        chargedLayer.style.background = `conic-gradient(from -90deg, ${gradientForColors(fillColors)})`;
+        chargedLayer.style.opacity = introPhase === "spread" ? `${(1 - introFade) * 0.94}` : "1";
+        art.appendChild(chargedLayer);
+      }
+    }
+  } else {
+    const colors = emptyColors.slice();
+    for (let i = 0; i < visibleProgress; i++) {
+      colors[i] = currentCenterState === "ready" || currentCenterState === "triggered" || currentCenterState === "resolving"
+        ? fillColors[i]
+        : previewColors[i];
+    }
+    baseLayer.style.background = `conic-gradient(from -90deg, ${gradientForColors(colors)})`;
+    art.appendChild(baseLayer);
+  }
+
+  const core = document.createElement("div");
+  core.className = "absolute inset-[36%] rounded-full";
+  core.style.backgroundColor = introActive
+    ? mixHexColors("#fff2c4", "#f2ebd7", clamp01(introCenterFadeProgress))
+    : "#f2ebd7";
+  art.appendChild(core);
+}
+
+function createL3EventElement() {
+  const el = document.createElement("div");
+  el.className = "absolute inset-0 rounded-md overflow-hidden shadow-lg";
+  el.style.backgroundColor = "#f2ebd7";
+  const art = document.createElement("div");
+  art.className = "tile-art";
+  el.appendChild(art);
+  populateEightWedgeFace(art, KALEIDOSCOPE_COLORS);
+  return el;
+}
+
+function renderHiddenIntroCell(r, c) {
+  const boardEl = document.getElementById("game-board");
+  const wrap = document.createElement("div");
+  wrap.dataset.row = r;
+  wrap.dataset.col = c;
+  wrap.className = "tile intro-placeholder relative aspect-square min-w-0 min-h-0 rounded-md flex items-center justify-center overflow-hidden";
+
+  const face = document.createElement("div");
+  face.className = "tile-face absolute inset-0 rounded-md overflow-hidden";
+  wrap.appendChild(face);
+  boardEl.appendChild(wrap);
+}
+
+function renderTile(r, c) {
+  const tile = board[r][c];
+  const boardEl = document.getElementById("game-board");
+
+  let wrap = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+  if (!wrap) {
+    const centerInteractive = isCenterCell(r, c) && getCenterState() === "ready" && !gameOver && !animating;
+    wrap = document.createElement("button");
+    wrap.type = "button";
+    wrap.dataset.row = r;
+    wrap.dataset.col = c;
+    wrap.className =
+      "tile relative aspect-square min-w-0 min-h-0 rounded-md flex items-center justify-center overflow-hidden " +
+      (gameOver || animating || (isCenterCell(r, c) && !centerInteractive) ? "cursor-default" : "cursor-pointer");
+    wrap.addEventListener("click", () => tap(r, c));
+    boardEl.appendChild(wrap);
+  } else {
+    const centerInteractive = isCenterCell(r, c) && getCenterState() === "ready" && !gameOver && !animating;
+    wrap.className =
+      "tile relative aspect-square min-w-0 min-h-0 rounded-md flex items-center justify-center overflow-hidden " +
+      (gameOver || animating || (isCenterCell(r, c) && !centerInteractive) ? "cursor-default" : "cursor-pointer");
+  }
+
+  let face = wrap.querySelector(".tile-face");
+  if (!face) {
+    face = document.createElement("div");
+    wrap.appendChild(face);
+  }
+
+  face.className = "tile-face absolute inset-0 rounded-md overflow-hidden";
+  face.innerHTML = "";
+  face.style.backgroundColor = "#27272a";
+  face.style.backgroundImage = "";
+  face.style.border = "none";
+
+  const art = document.createElement("div");
+  art.className = "tile-art";
+  face.appendChild(art);
+
+  const turns = (tile.visualTurns ?? tile.rot) * 90;
+
+  if (tile.type === TILE_TYPE.L1) {
+    const pair = tile.pairIndices || [tile.colorIndex, (tile.colorIndex + 1) % COLORS.length];
+    const c1 = colorAtIndex(pair[0]);
+    const c2 = colorAtIndex(pair[1]);
+    art.style.backgroundImage =
+      `linear-gradient(135deg, ${c1} 0%, ${c1} 50%, ${c2} 50%, ${c2} 100%)`;
+    art.style.transform = `rotate(${turns}deg)`;
+    const seam = document.createElement("div");
+    seam.className = "seam";
+    art.appendChild(seam);
+  } else if (tile.type === TILE_TYPE.L2) {
+    renderL2Face(art, tile, turns);
+  } else if (tile.type === TILE_TYPE.CENTER) {
+    renderCenterFace(face, art);
+  }
+
+  if (tile.type === TILE_TYPE.CENTER) {
+    const currentCenterState = getCenterState();
+    const visibleProgress = getVisibleCenterProgress();
+    const progressRatio = requiredConnections ? (visibleProgress / requiredConnections) : 0;
+    const lift = 0.45 + (progressRatio * 3.2);
+    const glow = 0.06 + (progressRatio * 0.18);
+
+    wrap.classList.add("center-control");
+    wrap.classList.toggle("center-charging", currentCenterState === "charging");
+    wrap.classList.toggle("center-ready", currentCenterState === "ready");
+    wrap.classList.toggle("center-triggered", currentCenterState === "triggered");
+    wrap.classList.toggle("center-resolving", currentCenterState === "resolving");
+    wrap.classList.toggle("center-intro-fadein", introActive && introPhase === "fadein");
+    wrap.classList.toggle("center-intro-charge", introActive && introPhase === "charge");
+    wrap.classList.toggle("center-intro-overload", introActive && introPhase === "overload");
+    wrap.classList.toggle("center-intro-launch", introActive && introPhase === "launch");
+    wrap.classList.toggle("center-intro-slam", introActive && introPhase === "slam");
+    wrap.classList.toggle("center-intro-spread", introActive && introPhase === "spread");
+    wrap.style.setProperty("--center-lift", `${lift.toFixed(2)}px`);
+    wrap.style.setProperty("--center-glow", `${glow.toFixed(3)}`);
+    wrap.style.setProperty("--intro-charge-opacity", `${(1 - clamp01(introCenterFadeProgress)).toFixed(3)}`);
+  } else {
+    wrap.classList.remove(
+      "center-control",
+      "center-charging",
+      "center-ready",
+      "center-triggered",
+      "center-resolving",
+      "center-near-ready",
+      "center-intro-fadein",
+      "center-intro-charge",
+      "center-intro-overload",
+      "center-intro-launch",
+      "center-intro-slam",
+      "center-intro-spread"
+    );
+    wrap.style.removeProperty("--center-lift");
+    wrap.style.removeProperty("--center-glow");
+    wrap.style.removeProperty("--intro-charge-opacity");
+  }
+
+  if (tile.justSpawned) {
+    wrap.classList.remove("tile-pop");
+    wrap.classList.remove("tile-pop-intro");
+    void wrap.offsetWidth;
+    wrap.classList.add(introActive && !isCenterCell(r, c) ? "tile-pop-intro" : "tile-pop");
+    tile.justSpawned = false;
+  }
+
+  if (isCenterCell(r, c)) {
+    syncCenterReadyMode();
+  }
+}
+
+function renderBoard() {
+  const boardEl = document.getElementById("game-board");
+  boardEl.innerHTML = "";
+  for (let r = getVisibleRowStart(); r <= getVisibleRowEnd(); r++) {
+    for (let c = 0; c < GRID_COLS; c++) {
+      if (shouldRenderCell(r, c)) {
+        renderTile(r, c);
+      } else {
+        renderHiddenIntroCell(r, c);
+      }
+    }
+  }
+  syncCenterReadyMode();
+}
+
+function updateProgressUI() {
+  const goalText = `CHAIN ${requiredConnections}`;
+  const goalValue = document.getElementById("goal-value");
+  if (goalValue) goalValue.textContent = goalText;
+}
+
+function status(msg) {
+  const detail = document.getElementById("goal-detail");
+  if (!detail) return;
+  detail.textContent = msg;
+}
+
+function inBounds(r, c) {
+  return isVisibleCell(r, c);
+}
+
+function neighborsOf(r, c) {
+  return [
+    { r: r - 1, c, dir: "top" },
+    { r: r + 1, c, dir: "bottom" },
+    { r, c: c - 1, dir: "left" },
+    { r, c: c + 1, dir: "right" },
+  ].filter((pos) => inBounds(pos.r, pos.c) && !isCenterCell(pos.r, pos.c));
+}
+
+function getMatches(r, c) {
+  const tile = board[r][c];
+  if (!tile || isCenterCell(r, c)) return [];
+
+  const edges = tile.getEdges();
+  const valid = [];
+
+  neighborsOf(r, c).forEach((pos) => {
+    const neighbor = board[pos.r][pos.c];
+    if (!neighbor) return;
+
+    if (tile.type === TILE_TYPE.L1 && neighbor.type !== TILE_TYPE.L1) return;
+    if (tile.type === TILE_TYPE.L2 && neighbor.type !== TILE_TYPE.L1) return;
+    if (tile.type !== TILE_TYPE.L1 && tile.type !== TILE_TYPE.L2) return;
+
+    const nEdges = neighbor.getEdges();
+
+    if (pos.r < r && edges.top === nEdges.bottom) valid.push(pos);
+    else if (pos.r > r && edges.bottom === nEdges.top) valid.push(pos);
+    else if (pos.c < c && edges.left === nEdges.right) valid.push(pos);
+    else if (pos.c > c && edges.right === nEdges.left) valid.push(pos);
+  });
+
+  return valid;
+}
+
+function getMatchedEdgeColors(r, c, matches) {
+  const tile = board[r][c];
+  if (!tile) return [];
+
+  const edges = tile.getEdges();
+  return matches.map((pos) => {
+    if (pos.r < r) return edges.top;
+    if (pos.r > r) return edges.bottom;
+    if (pos.c < c) return edges.left;
+    return edges.right;
+  });
+}
+
+function l1HasBothColorsMatched(r, c, supports) {
+  const tile = board[r][c];
+  if (!tile || tile.type !== TILE_TYPE.L1 || supports.length < 2) return false;
+
+  const pair = tile.pairIndices || [tile.colorIndex, (tile.colorIndex + 1) % COLORS.length];
+  const requiredColors = new Set([
+    colorAtIndex(pair[0]),
+    colorAtIndex(pair[1]),
+  ]);
+  const matchedColors = new Set(getMatchedEdgeColors(r, c, supports));
+
+  return [...requiredColors].every((color) => matchedColors.has(color));
+}
+
+function getL1MatchResolution(r, c) {
+  const matches = getMatches(r, c);
+  const supports = [...matches];
+  const canMerge =
+    matches.length >= 2 &&
+    supports.length >= 2 &&
+    l1HasBothColorsMatched(r, c, supports);
+
+  return { matches, assists: [], supports, canMerge };
+}
+
+function l2TilesConnect(a, b) {
+  const tileA = board[a.r][a.c];
+  const tileB = board[b.r][b.c];
+  if (!tileA || !tileB || tileA.type !== TILE_TYPE.L2 || tileB.type !== TILE_TYPE.L2) {
+    return false;
+  }
+
+  const aEdges = tileA.getEdges();
+  const bEdges = tileB.getEdges();
+
+  if (a.r === b.r) {
+    if (a.c + 1 === b.c) return aEdges.right === bEdges.left;
+    if (a.c - 1 === b.c) return aEdges.left === bEdges.right;
+  }
+
+  if (a.c === b.c) {
+    if (a.r + 1 === b.r) return aEdges.bottom === bEdges.top;
+    if (a.r - 1 === b.r) return aEdges.top === bEdges.bottom;
+  }
+
+  return false;
+}
+
+function performMerge(r, c, neighbors, assistNeighbors = []) {
+  const center = board[r][c];
+  if (!center) return 0;
+
+  if (center.type !== TILE_TYPE.L1 && center.type !== TILE_TYPE.L2) return 0;
+
+  const hasAssistSupport = assistNeighbors.length > 0;
+
+  if (center.type === TILE_TYPE.L1) {
+    if (neighbors.length < 2 && !(neighbors.length >= 1 && hasAssistSupport)) {
+      return 0;
+    }
+  } else {
+    const hasAllFourSides = neighborsOf(r, c).length === 4 && neighbors.length === 4;
+    if (!hasAllFourSides) return 0;
+  }
+
+  const mergedCount = neighbors.length + 1;
+
+  if (center.type === TILE_TYPE.L1) {
+    const l2Rot = Math.floor(Math.random() * 4);
+    center.type = TILE_TYPE.L2;
+    center.rot = l2Rot;
+    center.visualTurns = l2Rot;
+    center.qColors = createCanonicalL2Colors();
+    center.justSpawned = false;
+  } else if (center.type === TILE_TYPE.L2) {
+    board[r][c] = createRandomL1Tile();
+  }
+
+  neighbors.forEach((pos) => {
+    board[pos.r][pos.c] = createRandomL1Tile();
+  });
+
+  return mergedCount;
+}
+
+function sortCluster(cluster) {
+  return [...cluster].sort((a, b) => (a.r - b.r) || (a.c - b.c));
+}
+
+function getConnectedL2Cluster(r, c, visited = new Set()) {
+  if (!inBounds(r, c) || isCenterCell(r, c) || board[r][c]?.type !== TILE_TYPE.L2) {
+    return [];
+  }
+
+  const queue = [{ r, c }];
+  const cluster = [];
+  visited.add(`${r},${c}`);
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    cluster.push(current);
+
+    neighborsOf(current.r, current.c).forEach((pos) => {
+      const key = `${pos.r},${pos.c}`;
+      if (visited.has(key)) return;
+      if (board[pos.r][pos.c]?.type !== TILE_TYPE.L2) return;
+      if (!l2TilesConnect(current, pos)) return;
+      visited.add(key);
+      queue.push({ r: pos.r, c: pos.c });
+    });
+  }
+
+  return sortCluster(cluster);
+}
+
+function findAllL2Clusters(minSize = 2) {
+  const visited = new Set();
+  const clusters = [];
+
+  for (let r = getVisibleRowStart(); r <= getVisibleRowEnd(); r++) {
+    for (let c = 0; c < GRID_COLS; c++) {
+      const key = `${r},${c}`;
+      if (visited.has(key) || isCenterCell(r, c) || board[r][c]?.type !== TILE_TYPE.L2) continue;
+      const cluster = getConnectedL2Cluster(r, c, visited);
+      if (cluster.length >= minSize) clusters.push(cluster);
+    }
+  }
+
+  return clusters.sort((a, b) => {
+    const a0 = a[0];
+    const b0 = b[0];
+    return (a0.r - b0.r) || (a0.c - b0.c);
+  });
+}
+
+function countMatchesOfType(matches, type) {
+  return matches.filter((pos) => board[pos.r][pos.c]?.type === type).length;
+}
+
+function getCellWrap(r, c) {
+  return document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+}
+
+function getWrapCenter(wrap, shellRect) {
+  const rect = wrap.getBoundingClientRect();
+  return {
+    x: rect.left - shellRect.left + (rect.width / 2),
+    y: rect.top - shellRect.top + (rect.height / 2),
+  };
+}
+
+function isCenterReady() {
+  return getCenterState() === "ready";
+}
+
+function triggerCenterActivation() {
+  if (!isCenterReady() || centerState === "triggered" || centerState === "resolving" || coreBursting) {
+    return;
+  }
+
+  const shell = document.getElementById("board-shell");
+  centerState = "triggered";
+  animating = true;
+  renderTile(CENTER_ROW, CENTER_COL);
+  status("Center overloaded.");
+
+  setTimeout(() => {
+    centerState = "resolving";
+    renderTile(CENTER_ROW, CENTER_COL);
+
+    if (shell) {
+      shell.classList.remove("board-impact");
+      void shell.offsetWidth;
+      shell.classList.add("board-impact");
+    }
+
+    setTimeout(() => {
+      if (shell) shell.classList.remove("board-impact");
+      triggerCoreBurst();
+    }, CENTER_SLAM_MS);
+  }, CENTER_TRIGGER_ANTICIPATION_MS);
+}
+
+function showWinOverlay() {
+  finalWinAchieved = true;
+  document.getElementById("win-overlay").classList.remove("hidden");
+}
+
+function completeStageAfterBurst() {
+  if (!coreBursting) return;
+
+  const previousRowCount = activeRowCount;
+
+  if (currentMilestoneIndex >= STAGE_MILESTONES.length - 1) {
+    centerState = "idle";
+    updateProgressUI();
+    coreBursting = false;
+    coreOverloading = false;
+    showWinOverlay();
+    return;
+  }
+
+  currentMilestoneIndex += 1;
+  syncStageMilestoneState();
+  centerState = "idle";
+  updateProgressUI();
+  coreBursting = false;
+  coreOverloading = false;
+  status(
+    activeRowCount > previousRowCount
+      ? `Board expanded to ${activeRowCount}x${GRID_COLS}. Build a chain of ${requiredConnections} tiles.`
+      : `Build a chain of ${requiredConnections} tiles.`
+  );
+}
+
+function refillNonCenterTiles() {
+  for (let r = getVisibleRowStart(); r <= getVisibleRowEnd(); r++) {
+    for (let c = 0; c < GRID_COLS; c++) {
+      if (isCenterCell(r, c)) continue;
+      board[r][c] = createRandomL1Tile();
+    }
+  }
+}
+
+function triggerCoreBurst() {
+  if (coreBursting) return;
+  coreBursting = true;
+  animating = true;
+  const centerWrap = getCellWrap(CENTER_ROW, CENTER_COL);
+  const shell = document.getElementById("board-shell");
+  const shellRect = shell.getBoundingClientRect();
+  const center = centerWrap ? getWrapCenter(centerWrap, shellRect) : null;
+
+  if (centerWrap) {
+    centerWrap.classList.remove("burst-center-pulse");
+    void centerWrap.offsetWidth;
+    centerWrap.classList.add("burst-center-pulse");
+  }
+
+  const burstTiles = [];
+  let maxDistance = 1;
+  for (let r = getVisibleRowStart(); r <= getVisibleRowEnd(); r++) {
+    for (let c = 0; c < GRID_COLS; c++) {
+      if (isCenterCell(r, c)) continue;
+      const wrap = getCellWrap(r, c);
+      if (!wrap || !center) continue;
+      const cellCenter = getWrapCenter(wrap, shellRect);
+      const dx = cellCenter.x - center.x;
+      const dy = cellCenter.y - center.y;
+      const distance = Math.hypot(dx, dy);
+      maxDistance = Math.max(maxDistance, distance);
+      burstTiles.push({ wrap, dx, dy, distance });
+    }
+  }
+
+  burstTiles.forEach((tile) => {
+    tile.distanceRatio = tile.distance / maxDistance;
+    tile.delay = Math.round(tile.distanceRatio * BURST_STAGGER_MAX_MS);
+    tile.travelMultiplier =
+      BURST_TRAVEL_MIN_MULTIPLIER +
+      ((BURST_TRAVEL_MAX_MULTIPLIER - BURST_TRAVEL_MIN_MULTIPLIER) * tile.distanceRatio);
+  });
+
+  const maxDelay = burstTiles.reduce((max, tile) => Math.max(max, tile.delay), 0);
+  const explodeStartOffset = BURST_SPIN_DURATION_MS + BURST_SPIN_TO_EXPLODE_HOLD_MS;
+  const refillDelay =
+    BURST_CENTER_PULSE_MS +
+    BURST_CENTER_TO_SPIN_HOLD_MS +
+    explodeStartOffset +
+    maxDelay +
+    BURST_EXPLODE_DURATION_MS +
+    BURST_CLEAR_HOLD_MS;
+
+  setTimeout(() => {
+    burstTiles.forEach((tile) => {
+      tile.wrap.style.animationDelay = `${tile.delay}ms`;
+      tile.wrap.classList.add("burst-spin");
+    });
+
+    setTimeout(() => {
+      burstTiles.forEach((tile) => {
+        const burstScale = BURST_TRAVEL_BASE * tile.travelMultiplier;
+        tile.wrap.style.setProperty("--burst-x", `${tile.dx * burstScale}px`);
+        tile.wrap.style.setProperty("--burst-y", `${tile.dy * burstScale}px`);
+
+        setTimeout(() => {
+          tile.wrap.style.animationDelay = `${tile.delay}ms`;
+          tile.wrap.classList.remove("burst-spin");
+          tile.wrap.classList.add("burst-explode");
+        }, 0);
+      });
+      status(currentMilestoneIndex >= STAGE_MILESTONES.length - 1 ? "You win." : "Stage cleared.");
+
+      setTimeout(() => {
+        completeStageAfterBurst();
+        refillNonCenterTiles();
+        renderBoard();
+        animating = false;
+        if (!hasMoves()) endGame();
+      }, refillDelay);
+    }, explodeStartOffset);
+  }, BURST_CENTER_PULSE_MS + BURST_CENTER_TO_SPIN_HOLD_MS);
+}
+
+function startMergeAnimation(r, c, neighbors, assistNeighbors = []) {
+  animating = true;
+
+  const centerEl = getCellWrap(r, c);
+  if (centerEl) centerEl.classList.add("merge-center");
+
+  neighbors.forEach((pos) => {
+    const el = getCellWrap(pos.r, pos.c);
+    if (!el) return;
+    el.classList.add("merge-neighbor-highlight");
+  });
+
+  assistNeighbors.forEach((pos) => {
+    const el = getCellWrap(pos.r, pos.c);
+    if (!el) return;
+    el.classList.add("assist-match");
+  });
+
+  setTimeout(() => {
+    neighbors.forEach((pos) => {
+      const el = getCellWrap(pos.r, pos.c);
+      if (!el) return;
+      el.classList.remove("merge-neighbor-highlight");
+
+      if (pos.r < r) el.classList.add("merge-from-top");
+      else if (pos.r > r) el.classList.add("merge-from-bottom");
+      else if (pos.c < c) el.classList.add("merge-from-left");
+      else el.classList.add("merge-from-right");
+    });
+
+    assistNeighbors.forEach((pos) => {
+      const el = getCellWrap(pos.r, pos.c);
+      if (!el) return;
+      el.classList.remove("assist-match");
+    });
+
+    setTimeout(() => {
+      const count = performMerge(r, c, neighbors, assistNeighbors);
+
+      if (count > 0) {
+        renderTile(r, c);
+        renderTile(CENTER_ROW, CENTER_COL);
+
+        const ce = getCellWrap(r, c);
+        if (ce) {
+          const face = ce.querySelector(".tile-face");
+          if (face) face.classList.add("merge-result");
+
+          status(`Merged ${count} tiles.`);
+
+          setTimeout(() => {
+            neighbors.forEach((pos) => renderTile(pos.r, pos.c));
+            renderTile(CENTER_ROW, CENTER_COL);
+            if (isCenterReady()) {
+              status("Tap center.");
+            }
+            animating = false;
+            if (!hasMoves()) endGame();
+          }, MERGE_SETTLE_MS);
+
+          return;
+        }
+      }
+
+      renderTile(r, c);
+      neighbors.forEach((pos) => renderTile(pos.r, pos.c));
+      renderTile(CENTER_ROW, CENTER_COL);
+
+      animating = false;
+      if (!hasMoves()) endGame();
+    }, MERGE_INWARD_MS);
+  }, MERGE_HIGHLIGHT_MS);
+}
+
+function getRotationStep(tile) {
+  if (tile.type === TILE_TYPE.CENTER) return 0;
+  return 1;
+}
+
+function getReachableRotations(tile) {
+  const step = getRotationStep(tile);
+  if (step === 0) return [tile.rot];
+
+  const seen = new Set();
+  const rotations = [];
+  let rot = tile.rot;
+
+  while (!seen.has(rot)) {
+    seen.add(rot);
+    rotations.push(rot);
+    rot = (rot + step) % 4;
+  }
+
+  return rotations;
+}
+
+function hasMoves() {
+  if (isCenterReady()) {
+    return true;
+  }
+
+  for (let r = getVisibleRowStart(); r <= getVisibleRowEnd(); r++) {
+    for (let c = 0; c < GRID_COLS; c++) {
+      if (isCenterCell(r, c)) continue;
+      const tile = board[r][c];
+      if (!tile || (tile.type !== TILE_TYPE.L1 && tile.type !== TILE_TYPE.L2)) continue;
+
+      const originalRot = tile.rot;
+      const reachableRotations = getReachableRotations(tile);
+
+      for (const rot of reachableRotations) {
+        tile.rot = rot;
+        let canMerge = false;
+
+        if (tile.type === TILE_TYPE.L1) {
+          canMerge = getL1MatchResolution(r, c).canMerge;
+        } else {
+          const matches = getMatches(r, c);
+          canMerge = neighborsOf(r, c).length === 4 && matches.length === 4;
+        }
+
+        if (canMerge) {
+          tile.rot = originalRot;
+          return true;
+        }
+      }
+
+      tile.rot = originalRot;
+    }
+  }
+  return false;
+}
+
+function tap(r, c) {
+  if (gameOver || animating) return;
+
+  if (isCenterCell(r, c)) {
+    if (isCenterReady()) {
+      playTileMergeSound();
+      triggerCenterActivation();
+    }
+    return;
+  }
+
+  if (isCenterReady()) return;
+
+  const tile = board[r][c];
+  if (!tile) return;
+
+  const rotationStep = getRotationStep(tile);
+  if (rotationStep === 0) return;
+
+  tile.rot = (tile.rot + rotationStep) % 4;
+  tile.visualTurns = (tile.visualTurns ?? tile.rot) + rotationStep;
+  playTileTurnSound();
+
+  renderTile(r, c);
+  renderTile(CENTER_ROW, CENTER_COL);
+
+  setTimeout(() => {
+    let matches = [];
+    let assistNeighbors = [];
+    let canMerge = false;
+
+    if (tile.type === TILE_TYPE.L1) {
+      const resolution = getL1MatchResolution(r, c);
+      matches = resolution.matches;
+      assistNeighbors = resolution.assists;
+      canMerge = resolution.canMerge;
+    } else if (tile.type === TILE_TYPE.L2) {
+      matches = getMatches(r, c);
+      canMerge = neighborsOf(r, c).length === 4 && matches.length === 4;
+    }
+
+    if (canMerge) {
+      playTileMergeSound();
+      startMergeAnimation(r, c, matches, assistNeighbors);
+      return;
+    }
+
+    renderTile(CENTER_ROW, CENTER_COL);
+
+    if (isCenterReady()) {
+      status("Tap center.");
+      return;
+    }
+
+    if (getLargestChainSize() > 0) {
+      status(`Need a chain of ${requiredConnections} tiles.`);
+      if (!hasMoves()) endGame();
+      return;
+    }
+
+    if (!hasMoves()) endGame();
+  }, ROTATION_SETTLE_MS);
+}
+
+function endGame() {
+  gameOver = true;
+  status("No more moves.");
+  document.getElementById("game-over-overlay").classList.remove("hidden");
+}
+
+function init(playIntro = false) {
+  gameOver = false;
+  animating = false;
+  centerState = "idle";
+  currentMilestoneIndex = 0;
+  syncStageMilestoneState();
+  finalWinAchieved = false;
+  keepPlayingAfterWin = false;
+  coreOverloading = false;
+  coreBursting = false;
+  document.getElementById("game-over-overlay").classList.add("hidden");
+  document.getElementById("win-overlay").classList.add("hidden");
+  clearIntroShellState();
+  updateProgressUI();
+  initBoard(playIntro);
+  if (!playIntro) {
+    status(`Build a chain of ${requiredConnections} tiles.`);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const startScreen = document.getElementById("start-screen");
+
+  document.documentElement.style.setProperty("--spawn-pop-duration", `${SPAWN_POP_DURATION_MS}ms`);
+  document.documentElement.style.setProperty("--intro-pop-duration", `${INTRO_POP_DURATION_MS}ms`);
+  document.documentElement.style.setProperty("--intro-charge-duration", `${INTRO_CHARGE_DURATION_MS}ms`);
+  document.documentElement.style.setProperty("--board-clear-duration", `${BOARD_CLEAR_ANIMATION_MS}ms`);
+  document.documentElement.style.setProperty("--merge-highlight-duration", `${MERGE_HIGHLIGHT_MS}ms`);
+  document.documentElement.style.setProperty("--merge-inward-duration", `${MERGE_INWARD_MS}ms`);
+  document.documentElement.style.setProperty("--merge-settle-duration", `${MERGE_SETTLE_MS}ms`);
+  document.documentElement.style.setProperty("--burst-pulse-duration", `${BURST_CENTER_PULSE_MS}ms`);
+  document.documentElement.style.setProperty("--burst-spin-duration", `${BURST_SPIN_DURATION_MS}ms`);
+  document.documentElement.style.setProperty("--burst-explode-duration", `${BURST_EXPLODE_DURATION_MS}ms`);
+
+  tileTurnAudio = new Audio(`file://${encodeURI(TILE_TURN_SOUND_PATH)}`);
+  tileTurnAudio.preload = "auto";
+  tileTurnAudio.volume = 0.65;
+  tileMergeAudio = new Audio(`file://${encodeURI(TILE_MERGE_SOUND_PATH)}`);
+  tileMergeAudio.preload = "auto";
+  tileMergeAudio.volume = 0.7;
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      startScreen.classList.add("start-screen-entered");
+    });
+  });
+
+  document.getElementById("start-button").addEventListener("click", () => {
+    startScreen.classList.add("start-fade-out");
+
+    setTimeout(() => {
+      startScreen.classList.add("hidden");
+      startScreen.classList.remove("start-fade-out");
+      document.getElementById("game-screen").classList.remove("hidden");
+      init(true);
+    }, START_FADE_OUT_MS);
+  });
+
+  document.getElementById("restart-button").addEventListener("click", () => {
+    document.getElementById("game-screen").classList.remove("hidden");
+    init(true);
+  });
+  document.getElementById("keep-playing-button").addEventListener("click", () => {
+    keepPlayingAfterWin = true;
+    document.getElementById("win-overlay").classList.add("hidden");
+    status(`Build a chain of ${requiredConnections} tiles.`);
+  });
+  document.getElementById("new-run-button").addEventListener("click", () => {
+    document.getElementById("game-screen").classList.remove("hidden");
+    init(true);
+  });
+});
+</script>
+</body>
+</html>
