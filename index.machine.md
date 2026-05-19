@@ -13,7 +13,7 @@ Based in Elverson, PA. Working across global systems.
 
 ## Brand Context
 
-Built and supported digital systems across enterprise, global, and local operating environments.
+Built and supported digital systems across global, enterprise-scale operating environments.
 
 Organizations and brands featured on the homepage:
 
