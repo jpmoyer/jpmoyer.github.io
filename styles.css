@@ -8,10 +8,11 @@
   --color-accent-soft: #e5eee9;
   --max-width: 980px;
   --radius: 14px;
-  --font-sans: "IBM Plex Sans", "Inter", "Segoe UI", sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue",
+    Arial, sans-serif;
   --font-serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua",
     "Georgia", serif;
-  --font-mono: "IBM Plex Mono", "SFMono-Regular", monospace;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --font-heading: var(--font-sans);
   --font-body: var(--font-sans);
   --space-1: 0.5rem;
@@ -28,10 +29,6 @@
 *::before,
 *::after {
   box-sizing: border-box;
-}
-
-html {
-  scroll-behavior: smooth;
 }
 
 body {
@@ -135,7 +132,7 @@ main:focus {
   border-radius: 0.45rem;
   font-family: var(--font-heading);
   color: var(--color-text);
-  font-size: 1.05rem;
+  font-size: 1.3rem;
   font-weight: 750;
   letter-spacing: -0.033em;
   text-decoration: none;
@@ -902,8 +899,12 @@ figcaption,
     justify-content: space-between;
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 0.7rem var(--space-3);
+    gap: 0.65rem 0.85rem;
     padding: 0.8rem 0;
+  }
+
+  .site-title__mark {
+    transform: translateY(-1px);
   }
 
   .site-nav {
@@ -911,7 +912,7 @@ figcaption,
     width: auto;
     flex-wrap: nowrap;
     justify-content: flex-start;
-    gap: 0.65rem;
+    gap: 0.52rem;
     overflow-x: auto;
     padding-bottom: 0.2rem;
     scrollbar-width: none;
@@ -924,7 +925,7 @@ figcaption,
 
   .site-nav a {
     white-space: nowrap;
-    font-size: 0.82rem;
+    font-size: 0.75rem;
   }
 
   .story-step {
@@ -982,17 +983,26 @@ figcaption,
     border-radius: 6px;
   }
 
+  .translation-operating-layer__list li {
+    font-size: 0.65rem;
+    min-width: 0;
+    padding-left: 0.22rem;
+    padding-right: 0.22rem;
+    white-space: nowrap;
+    letter-spacing: -0.01em;
+  }
+
   .translation-operating-layer {
     gap: 0.48rem;
     max-width: none;
-    padding: 0.66rem 0.66rem 0.74rem;
+    padding: 0.66rem 0.4rem 0.74rem;
     border-color: rgba(190, 186, 177, 0.56);
     background: rgba(240, 238, 233, 0.96);
   }
 
   .translation-operating-layer__list {
     gap: 0.34rem;
-    grid-template-columns: repeat(5, minmax(4rem, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .closing-card {
@@ -1129,5 +1139,10 @@ figcaption,
   a {
     color: #000;
     text-decoration: underline;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
   }
 }
