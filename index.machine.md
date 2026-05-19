@@ -141,13 +141,19 @@ A small set of side projects where I explore systems thinking through play, inte
 
 Tile-based puzzle game exploring spatial logic, merge mechanics, and progressive interaction design.
 
+Link coming soon.
+
 ### BOOM
 
 A fast "cut the wire" puzzle concept built around misdirection, visual tension, and arcade-style interaction.
 
+Link coming soon.
+
 ### WAVE
 
 A playful sound-sculpting interface for learning synthesis concepts through shape, pitch, motion, space, filter, and performance controls.
+
+Link coming soon.
 
 ## Offline
 
