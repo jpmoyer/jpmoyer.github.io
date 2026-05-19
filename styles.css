@@ -875,15 +875,40 @@ figcaption,
 }
 
 @media (max-width: 680px) {
+  body {
+    line-height: 1.66;
+  }
+
+  .section {
+    padding: 3.35rem 0;
+  }
+
+  .section-heading {
+    margin-bottom: 1.65rem;
+  }
+
+  .section-intro,
+  .intro__content p,
+  .prose-block p,
+  .impact-card p,
+  .project-card p,
+  .ai-process-card p,
+  .closing-card p:not(.section-label) {
+    line-height: 1.62;
+  }
+
   .site-header__inner {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.6rem;
-    padding: 0.9rem 0;
+    align-items: center;
+    justify-content: space-between;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.7rem var(--space-3);
+    padding: 0.8rem 0;
   }
 
   .site-nav {
-    width: 100%;
+    flex: 1 1 100%;
+    width: auto;
     flex-wrap: nowrap;
     justify-content: flex-start;
     gap: 0.65rem;
@@ -915,42 +940,70 @@ figcaption,
     object-position: 52% 18%;
   }
 
+  .impact-card,
+  .project-card {
+    padding: 1.35rem;
+  }
+
   .translation-network {
-    gap: 0.95rem;
-    min-width: 31.5rem;
-    padding: 0.9rem 0 0.8rem;
+    gap: 0.82rem;
+    min-width: 21.1rem;
+    padding: 0.8rem 0 0.76rem;
   }
 
   .translation-columns {
-    gap: 0.7rem;
+    grid-template-columns: repeat(3, minmax(6.5rem, 1fr));
+    gap: 0.48rem;
   }
 
   .translation-column {
-    gap: 0.65rem;
-    padding: 0.75rem 0.6rem;
+    gap: 0.48rem;
+    padding: 0.62rem 0.46rem;
+    border-color: rgba(214, 211, 203, 0.52);
+    background: rgba(255, 255, 255, 0.78);
   }
 
   .translation-column__label {
-    font-size: 0.64rem;
+    font-size: 0.58rem;
     letter-spacing: 0.035em;
+  }
+
+  .translation-column__list,
+  .translation-operating-layer__list {
+    list-style: none;
+    padding: 0;
   }
 
   .translation-column__list li,
   .translation-operating-layer__list li {
-    padding: 0.5rem 0.48rem;
-    font-size: 0.76rem;
-    line-height: 1.18;
+    padding: 0.42rem 0.38rem;
+    font-size: 0.7rem;
+    line-height: 1.15;
+    border-radius: 6px;
   }
 
   .translation-operating-layer {
-    gap: 0.6rem;
+    gap: 0.48rem;
     max-width: none;
-    padding: 0.75rem 0.8rem 0.85rem;
+    padding: 0.66rem 0.66rem 0.74rem;
+    border-color: rgba(190, 186, 177, 0.56);
+    background: rgba(240, 238, 233, 0.96);
   }
 
   .translation-operating-layer__list {
-    gap: 0.45rem;
-    grid-template-columns: repeat(5, minmax(5rem, 1fr));
+    gap: 0.34rem;
+    grid-template-columns: repeat(5, minmax(4rem, 1fr));
+  }
+
+  .closing-card {
+    padding: var(--space-4);
+    border-color: rgba(214, 211, 203, 0.72);
+    background: rgba(255, 255, 255, 0.68);
+  }
+
+  .closing-actions {
+    gap: 1rem;
+    margin-top: 1.65rem;
   }
 }
 
