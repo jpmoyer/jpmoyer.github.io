@@ -13,7 +13,7 @@ Based in Elverson, PA. Working across global systems.
 
 ## Brand Context
 
-Built and supported digital systems across global, enterprise-scale operating environments.
+Experience across global ecommerce, enterprise-scale, and agency-supported digital environments.
 
 Organizations and brands featured on the homepage:
 
@@ -27,6 +27,75 @@ Organizations and brands featured on the homepage:
 - Sweet Street
 - Rodale
 - Meet Greater Reading
+
+## Systems for Humans and Machines
+
+Structured information is becoming a business operating advantage.
+
+Reporting systems, structured data, consent-aware measurement, technical documentation, and analytics workflows all sit on the same maturity curve.
+
+The challenge is not just producing more data. It is building systems that are trustworthy, interpretable, and usable across teams, platforms, and increasingly machine-assisted discovery environments.
+
+AI-assisted discovery and agentic experiences raise the stakes, but the underlying work is still organizational: clearer standards, better governance, stronger implementation, and information systems that both people and machines can act on.
+
+## Organizational Impact
+
+### $0 to $7M ARR
+
+Built the measurement and reporting foundation for a new D2C business inside a global baby and pet gear manufacturer, supporting launch-stage visibility, early profitability, and investment-ready decision-making.
+
+### 20+ global markets
+
+Supported analytics across regional ecommerce teams operating on different sites, platforms, agencies, legal requirements, and maturity levels, while pushing toward shared definitions and comparable reporting.
+
+### 50% faster reporting cycles
+
+Replaced recurring manual reporting with centralized BigQuery logic and reusable reporting products, cutting time-to-insight by 50% in key workflows and making updates easier to scale.
+
+### 650%+ organic growth
+
+Turned technical SEO from one-off fixes into operating standards for structured data, indexation, canonicalization, crawl behavior, and search reporting.
+
+### 60% analytics accuracy recovery
+
+Led cross-functional recovery from a 60% analytics accuracy decline, coordinating tracking fixes, backfills, consent changes, and server-side measurement improvements.
+
+### Global consent governance
+
+Leading a centralized consent model across markets where privacy requirements, banner behavior, tracking logic, and business reporting need to stay aligned.
+
+## How I Create Leverage
+
+I create leverage where growth, commerce, and enterprise systems overlap — clarifying requirements, translating across teams, aligning decisions, standardizing definitions, and governing the systems that shape digital performance.
+
+### My Operating Layer
+
+- Clarify
+- Translate
+- Align
+- Standardize
+- Govern
+
+### Growth
+
+- Organic
+- Paid
+- CRM
+- UX
+
+### Commerce
+
+- Merchandising
+- Inventory
+- Pricing
+- Marketplaces
+
+### Enterprise
+
+- Technology
+- Governance
+- Regionalization
+- Partners
 
 ## How I Got Here
 
@@ -64,78 +133,9 @@ Most organizations treat UX, development, SEO, analytics, and governance as sepa
 
 Over time, I stopped seeing those as adjacent disciplines and started seeing them as one operating pattern: commercial priorities, technical systems, governance requirements, and team ownership all shaping the same outcomes.
 
-## Where I Work Best
-
-I work as a connective operating layer between commercial priorities, technical systems, governance needs, and regional execution, helping teams translate requirements, align decisions, and move shared systems forward.
-
-### My Operating Layer
-
-- Clarify
-- Translate
-- Align
-- Standardize
-- Govern
-
-### Growth
-
-- Organic
-- Paid
-- CRM
-- UX
-
-### Commerce
-
-- Merchandising
-- Inventory
-- Pricing
-- Marketplaces
-
-### Enterprise
-
-- Technology
-- Governance
-- Regionalization
-- Partners
-
-## Organizational Impact
-
-### $0 to $7M ARR
-
-Helped build the measurement and reporting foundation for a new D2C business inside a global baby and pet gear manufacturer, moving from launch-stage visibility to early profitability and investment-ready decision-making.
-
-### 20+ global markets
-
-Supported analytics across regional ecommerce teams operating on different sites, platforms, agencies, legal requirements, and maturity levels, while pushing toward shared definitions and comparable reporting.
-
-### 50%+ reporting efficiency gains
-
-Replaced recurring manual reporting cycles with centralized BigQuery logic and reusable reporting products, improving recurring reporting efficiency by roughly 50 to 100 percent and making updates easier to scale.
-
-### 650%+ organic growth
-
-Contributed to search gains by turning technical SEO from one-off fixes into operating standards for structured data, indexation, canonicalization, crawl behavior, and search reporting.
-
-### 60% analytics recovery
-
-Helped recover from a major tracking accuracy decline by coordinating tracking fixes, backfills, server-side improvements, and platform changes across analytics, ecommerce, consent, and implementation layers.
-
-### Global consent governance
-
-Leading a centralized consent model across markets where privacy requirements, regional banners, tracking behavior, and business reporting all need to stay aligned.
-
-## Systems for Humans and Machines
-
-Structured information is becoming a business operating advantage.
-
-Reporting systems, structured data, consent-aware measurement, technical documentation, and analytics workflows all sit on the same maturity curve.
-
-The challenge is not just producing more data. It is building systems that are trustworthy, interpretable, and usable across teams, platforms, and increasingly machine-assisted discovery environments.
-
-AI-assisted discovery and agentic experiences raise the stakes, but the underlying work is still organizational: clearer standards, better governance, stronger implementation, and information systems that both people and machines can act on.
-
 ## Selected Experiments
 
-A small set of side projects where I explore systems thinking through play, interaction design, rapid prototyping, sound, game mechanics, and model-assisted workflows.
+Side projects where I explore systems thinking through games, sound, interaction design, and rapid prototyping.
 
 ### SLANT
 

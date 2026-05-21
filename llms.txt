@@ -7,10 +7,10 @@ The site explains Jonathan's work across ecommerce measurement systems, data pro
 ## Main
 
 - [About](https://jonathan-moyer.com/#about): Overview of Jonathan's positioning across ecommerce systems, measurement, discovery, governance, and digital decision-making.
-- [How I Got Here](https://jonathan-moyer.com/#story): Career narrative connecting early web systems, agency work, enterprise-scale analytics, and global ecommerce operations.
-- [Where I Work Best](https://jonathan-moyer.com/#work): Explanation of how growth disciplines, operating environment realities, and operating-space work connect into clearer digital decision-making.
-- [Organizational Impact](https://jonathan-moyer.com/#impact): Selected outcomes across D2C growth, global markets, reporting efficiency, organic search, analytics recovery, and consent governance.
 - [Systems for Humans and Machines](https://jonathan-moyer.com/#systems): Perspective on structured information, consent-aware measurement, technical documentation, analytics workflows, and AI-assisted discovery.
+- [Organizational Impact](https://jonathan-moyer.com/#impact): Selected outcomes across D2C growth, global markets, reporting efficiency, organic search, analytics recovery, and consent governance.
+- [How I Create Leverage](https://jonathan-moyer.com/#work): Explanation of how growth, commerce, and enterprise systems are translated into clearer digital decisions and more durable operating leverage.
+- [How I Got Here](https://jonathan-moyer.com/#story): Career narrative connecting early web systems, agency work, enterprise-scale analytics, and global ecommerce operations.
 - [Selected Experiments](https://jonathan-moyer.com/#projects): Side projects exploring systems thinking through games, interaction design, sound, rapid prototyping, and model-assisted workflows.
 - [Offline](https://jonathan-moyer.com/#offline): Brief personal context on family life, Brazilian jiu-jitsu, and long-running outdoor projects.
 - [Resume](https://jonathan-moyer.com/jonathan-moyer-resume.pdf): Downloadable resume summarizing Jonathan's ecommerce analytics, measurement architecture, technical SEO, platform governance, and data infrastructure experience.
